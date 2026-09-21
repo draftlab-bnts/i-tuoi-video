@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<!--
+  PAGINA DE ENTREGA (area do aluno): 3 videos + 2 PDFs + ajuda.
+  Arquivo unico, CSS inline, 1 script inline pequeno no fim, zero dependencia externa, zero pixel.
+  DISCRETA de proposito: titulo da aba, cabecalho e topo NAO citam o tema do curso. Nao colocar o tema aqui.
+
+  PLACEHOLDERS PRA TROCAR ANTES DE SUBIR (buscar por "{{" no editor; nao pode sobrar nenhum):
+    {{MARCA}}                 nome neutro da marca (cabecalho).
+    VIDEOS (ja preenchido)    ficam em videos/ (caminho RELATIVO no <source>: videos/video-1.mp4, -2, -3). Nunca URL absoluta.
+    {{WHATSAPP_NUMERO}}       so digitos, com DDI, sem "+" nem espaco. Ex.: 393331234567
+    {{EMAIL_AIUTO}}           e-mail de suporte. Aparece 2x: no mailto do botao e escrito por extenso.
+    {{RAGIONE_SOCIALE}}       nome legal do vendedor (rodape).
+    {{SEDE}}                  endereco completo do vendedor (rodape).
+    {{PARTITA_IVA_O_CNPJ}}    escrever com o rotulo junto, ex.: "CNPJ 00.000.000/0001-00" ou "P. IVA IT00000000000".
+    {{EMAIL_CONTATTO}}        e-mail de contato e de reclamacoes (rodape, 2x: texto e mailto).
+    {{PRIVACY_URL}}           link da informativa privacy.
+    {{TERMINI_URL}}           link dos termos e condicoes.
+
+  Copia de teste com tudo preenchido: node _tool\gera-teste.mjs  (sai em _demo\index-teste.html).
+  robots = noindex,nofollow pra sempre.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I tuoi video</title>
+<meta name="description" content="I tuoi 3 video e i tuoi 2 documenti.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<style>
+  :root{
+    --bg:#F5F1EA; --ink:#1B2530; --teal:#0E5A60; --teal-dark:#0A464B; --ocre:#B9802A;
+    --gray-strong:#59626E; --line:#E2DCD1; --card:#FFFFFF;
+    --wa:#17703F; --wa-dark:#0F5A31; --seen-bg:#E4F0EC;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  [hidden]{display:none !important}
+  /* base 125%: 1rem = 20px (e cresce junto se o aparelho usa fonte maior) */
+  html{font-size:125%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    font-size:1rem;line-height:1.6;overflow-wrap:break-word;
+    padding-bottom:5.6rem; /* espaco da barra fixa "Aiuto": ela nunca cobre conteudo */
+    padding-bottom:calc(5.6rem + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 20px}
+  h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:700}
+  h1{font-size:1.65rem;line-height:1.2;margin:0 0 1rem;letter-spacing:-.2px}
+  h2{font-size:1.35rem;line-height:1.25;margin:0 0 .8rem}
+  p{margin:0 0 .8rem}
+  a{color:var(--teal)}
+  strong{font-weight:700}
+
+  a:focus,video:focus{outline:4px solid var(--ink);outline-offset:3px}
+  a:focus:not(:focus-visible),video:focus:not(:focus-visible){outline:none}
+  a:focus-visible,video:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+
+  .site-head{border-bottom:1px solid var(--line);padding:14px 0}
+  .brand{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1rem;color:var(--ink)}
+
+  section{padding:1.6rem 0}
+  .hero{padding:1.6rem 0 .4rem}
+  .hero p{margin-bottom:0}
+
+  /* padding lateral em px de proposito: com fonte do sistema aumentada ele nao cresce e sobra largura pro texto */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2rem 16px}
+  .card.top-teal{border-top:5px solid var(--teal)}
+  .card.top-ocre{border-top:5px solid var(--ocre)}
+
+  /* caixa de instrucoes (fica logo depois do Video 1) */
+  .how{margin-top:1rem}
+  ol.steps{list-style:none;margin:0;padding:0;counter-reset:passo}
+  ol.steps li{position:relative;counter-increment:passo;padding:0 0 0 2.6rem;margin:0 0 1rem;min-height:2rem}
+  ol.steps li:last-child{margin-bottom:0}
+  ol.steps li::before{
+    content:counter(passo);position:absolute;left:0;top:0;width:2rem;height:2rem;
+    display:flex;align-items:center;justify-content:center;
+    border:3px solid var(--ocre);border-radius:50%;background:var(--card);
+    font-weight:700;font-size:1.1rem;line-height:1;color:var(--ink);
+  }
+
+  /* cartoes de video */
+  .video-card{border-top:5px solid var(--teal)}
+  .card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem .8rem;margin:0 0 .4rem}
+  .label{margin:0;font-size:1.3rem;line-height:1.2;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal)}
+  .seen{
+    margin:0;display:inline-flex;align-items:center;padding:.2rem .7rem;
+    font-size:1rem;line-height:1.3;font-weight:700;color:var(--teal-dark);
+    background:var(--seen-bg);border:2px solid var(--teal);border-radius:999px;white-space:nowrap;
+  }
+  .video-card h2{margin:0 0 .3rem}
+  .dur{margin:0 0 .8rem;color:var(--gray-strong)}
+  .video-box{margin:.8rem auto 0}
+  .video{
+    position:relative;width:100%;padding-top:56.25%;
+    background:var(--ink);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  }
+  .video video{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:var(--ink)}
+  .next-hint{margin:1rem 0 1.6rem;padding:0 .2rem;text-align:center}
+
+  /* botoes */
+  .btn{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    width:100%;min-height:3.2rem;padding:.7rem 1rem;margin:0;
+    background:var(--teal);color:#FFFFFF;text-decoration:none;
+    font-size:1.05rem;font-weight:700;line-height:1.25;
+    border:0;border-bottom:4px solid var(--teal-dark);border-radius:14px;
+  }
+  .btn:hover{background:var(--teal-dark)}
+  .btn + .btn{margin-top:1rem}
+  .btn svg{flex:0 0 auto;width:1.5rem;height:1.5rem;margin-right:.6rem}
+  .btn-wa{background:var(--wa);border-bottom-color:var(--wa-dark)}
+  .btn-wa:hover{background:var(--wa-dark)}
+
+  .email-plain{margin:1.2rem 0 0;padding:.8rem 14px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .email-plain strong{display:block;overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
+  .medico{margin:1.2rem 0 0}
+
+  /* barra fixa de ajuda */
+  .helpbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:10;
+    background:var(--bg);border-top:1px solid var(--line);
+    padding:.4rem 0;padding-bottom:calc(.4rem + env(safe-area-inset-bottom));
+  }
+  .helpbar .btn{
+    min-height:3rem;padding:.4rem 1rem;
+    background:var(--card);color:var(--teal);border:3px solid var(--teal);
+  }
+  .helpbar .btn:hover{background:var(--seen-bg)}
+
+  /* rodape */
+  footer{padding:.4rem 0 1rem}
+  .ai-note{
+    margin:0 0 1rem;padding:.8rem .9rem;background:var(--card);font-size:.9rem;
+    border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:14px;
+  }
+  .notice{background:var(--ink);color:#FFFFFF;border-radius:18px;padding:1.2rem 1.1rem;font-size:.9rem}
+  .notice p:last-child{margin-bottom:0}
+  .legal{font-size:.85rem;line-height:1.6;color:var(--gray-strong);margin-top:1.2rem}
+  .legal p{margin:0 0 .5rem}
+  .legal a{color:var(--teal);display:inline-block;padding:.6rem 0;overflow-wrap:anywhere}
+  .links{margin:0}
+  .links a{display:block;padding:.6rem 0;margin-top:1rem}
+
+  @media (min-width:700px){
+    body{font-size:1.05rem}
+    h1{font-size:2.2rem}
+    h2{font-size:1.55rem}
+    section{padding:2rem 0}
+    .hero{padding:2.4rem 0 .6rem}
+    .card{padding:1.7rem 1.8rem}
+    .notice{padding:1.7rem 1.8rem}
+  }
+
+  /* celular deitado: some a barra (nao come o video) e o video cabe inteiro na tela */
+  @media (orientation:landscape) and (max-height:499px){
+    body{padding-bottom:0}
+    .helpbar{display:none}
+    .video-box{max-width:calc(100vh * 16 / 9 - 12px)}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+  }
+  @media print{
+    body{padding-bottom:0}
+    .helpbar{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <p class="brand" data-ph="MARCA">{{MARCA}}</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- 1. Topo -->
+  <section class="hero" aria-labelledby="titolo">
+    <div class="wrap">
+      <h1 id="titolo">Benvenuto. Ecco i tuoi 3 video.</h1>
+      <p>Guardali con calma, uno alla volta. Conserva l'email con il tuo link: puoi tornare qui quando vuoi.</p>
+    </div>
+  </section>
+
+  <!-- 2. I tre video. Trocar so a URL dentro de cada <source>.
+       O Video 1 vem ANTES da caixa de instrucoes de proposito: ele tem que aparecer na primeira tela do celular. -->
+  <section aria-label="I tuoi 3 video">
+    <div class="wrap">
+
+      <article class="card video-card" data-video="1" aria-labelledby="v1-titolo">
+        <div class="card-head">
+          <p class="label">Video 1</p>
+          <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
+        </div>
+        <h2 id="v1-titolo">Cosa c'è di vero</h2>
+        <p class="dur">Circa 6 minuti</p>
+        <div class="video-box"><div class="video">
+          <video controls preload="none" playsinline poster="img/video-1.jpg" aria-labelledby="v1-titolo">
+            <source src="videos/video-1.mp4" type="video/mp4">
+            Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
+          </video>
+        </div></div>
+      </article>
+
+      <!-- Instrucoes: logo depois do Video 1; a frase "scendi" fica DEPOIS delas, colada no Video 2 -->
+      <div class="card top-ocre how" role="group" aria-labelledby="come">
+        <h2 id="come">Se non sai come far partire il video</h2>
+        <ol class="steps">
+          <li>Tocca il triangolo&nbsp;&#9654;&#xFE0E; al centro del video.</li>
+          <li>Per vederlo grande, gira il telefono in orizzontale oppure tocca il quadratino in basso a destra del video.</li>
+          <li>Se il video si ferma, controlla la connessione a internet e tocca di nuovo&nbsp;&#9654;&#xFE0E;.</li>
+        </ol>
+      </div>
+      <p class="next-hint">Quando hai finito, scendi: sotto c'è il Video 2.</p>
+
+      <article class="card video-card" data-video="2" aria-labelledby="v2-titolo">
+        <div class="card-head">
+          <p class="label">Video 2</p>
+          <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
+        </div>
+        <h2 id="v2-titolo">Il primo passo che nessuno ti vende</h2>
+        <p class="dur">Circa 7 minuti</p>
+        <div class="video-box"><div class="video">
+          <video controls preload="none" playsinline poster="img/video-2.jpg" aria-labelledby="v2-titolo">
+            <source src="videos/video-2.mp4" type="video/mp4">
+            Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
+          </video>
+        </div></div>
+      </article>
+      <p class="next-hint">Quando hai finito, scendi: sotto c'è il Video 3.</p>
+
+      <article class="card video-card" data-video="3" aria-labelledby="v3-titolo">
+        <div class="card-head">
+          <p class="label">Video 3</p>
+          <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
+        </div>
+        <h2 id="v3-titolo">Cosa fare domani mattina (e cosa chiedere al medico)</h2>
+        <p class="dur">Circa 7 minuti</p>
+        <div class="video-box"><div class="video">
+          <video controls preload="none" playsinline poster="img/video-3.jpg" aria-labelledby="v3-titolo">
+            <source src="videos/video-3.mp4" type="video/mp4">
+            Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
+          </video>
+        </div></div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- 4. Documenti -->
+  <section aria-labelledby="documenti">
+    <div class="wrap">
+      <h2 id="documenti">I tuoi 2 documenti</h2>
+      <p>Puoi aprirli, salvarli e stamparli.</p>
+      <a class="btn" href="pdf/checklist-30-giorni.pdf" target="_blank" rel="noopener">Apri la Checklist 30 giorni (2&nbsp;pagine)</a>
+      <a class="btn" href="pdf/guida-esami-e-domande.pdf" target="_blank" rel="noopener">Apri la Guida agli esami e alle domande per il medico (4&nbsp;pagine)</a>
+    </div>
+  </section>
+
+  <!-- 5. Aiuto -->
+  <section id="aiuto" aria-labelledby="aiuto-titolo">
+    <div class="wrap">
+      <h2 id="aiuto-titolo">Hai bisogno di aiuto?</h2>
+      <p>Scrivici. Ti risponde una persona, in italiano, entro 24 ore.</p>
+      <a class="btn btn-wa" data-ph="WHATSAPP_NUMERO" href="https://wa.me/{{WHATSAPP_NUMERO}}?text=Ho%20bisogno%20di%20aiuto%20con%20i%20video" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#FFFFFF" d="M12 3C6.9 3 2.8 6.6 2.8 11c0 2.1.9 4 2.5 5.4L4.4 21l4.7-2.4c.9.3 1.9.4 2.9.4 5.1 0 9.2-3.6 9.2-8S17.1 3 12 3z"/></svg>
+        Scrivici su WhatsApp
+      </a>
+      <a class="btn" data-ph="EMAIL_AIUTO" href="mailto:{{EMAIL_AIUTO}}?subject=Aiuto%20con%20i%20video">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#FFFFFF" d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 8.2L4.3 7.4v1.9L12 15l7.7-5.7V7.4L12 13.2z"/></svg>
+        Scrivici per email
+      </a>
+      <p class="email-plain">Oppure scrivi a questo indirizzo: <strong data-ph="EMAIL_AIUTO">{{EMAIL_AIUTO}}</strong></p>
+      <p class="medico">Per domande sulla tua salute parla con il tuo medico: qui non possiamo dare consigli medici.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- 7. Rodape legal -->
+<footer>
+  <div class="wrap">
+
+    <!-- Texto EXATO (AI Act art. 50). Nao editar. -->
+    <p class="ai-note">La presentatrice dei video è generata con intelligenza artificiale. Testi scritti da persone a partire dalle linee guida europee di urologia (EAU 2025).</p>
+
+    <div class="notice">
+      <p>Questi video sono informazione, non una visita medica. In caso di emergenza chiama il&nbsp;112.</p>
+      <p>Se stai attraversando un momento molto difficile: Telefono Amico, 02&nbsp;2327&nbsp;2327.</p>
+    </div>
+
+    <div class="legal">
+      <p>
+        <span data-ph="RAGIONE_SOCIALE">{{RAGIONE_SOCIALE}}</span> ·
+        <span data-ph="SEDE">{{SEDE}}</span> ·
+        <span data-ph="PARTITA_IVA_O_CNPJ">{{PARTITA_IVA_O_CNPJ}}</span><br>
+        Contatti e reclami: <a data-ph="EMAIL_CONTATTO" href="mailto:{{EMAIL_CONTATTO}}">{{EMAIL_CONTATTO}}</a>
+      </p>
+      <p class="links">
+        <a data-ph="TERMINI_URL" href="{{TERMINI_URL}}">Termini e condizioni</a>
+        <a data-ph="PRIVACY_URL" href="{{PRIVACY_URL}}">Informativa privacy</a>
+      </p>
+    </div>
+
+  </div>
+</footer>
+
+<!-- 6. Barra fixa: um botao so -->
+<nav class="helpbar" aria-label="Aiuto">
+  <div class="wrap">
+    <a class="btn" href="#aiuto">Aiuto</a>
+  </div>
+</nav>
+
+<script>
+/* Selo "Gia visto": aparece quando o video termina e fica guardado no aparelho.
+   Sem localStorage (bloqueado, modo privado) a pagina funciona igual, so nao lembra. */
+(function () {
+  var KEY = 'video-visti';
+  function read() {
+    try {
+      var o = JSON.parse(window.localStorage.getItem(KEY) || '{}');
+      return (o && typeof o === 'object') ? o : {};
+    } catch (e) { return {}; }
+  }
+  function save(o) {
+    try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {}
+  }
+  function show(card) {
+    var badge = card.querySelector('[data-seen]');
+    if (badge) { badge.removeAttribute('hidden'); }
+  }
+  var cards = document.querySelectorAll('[data-video]');
+  var videos = document.querySelectorAll('video');
+  var seen = read();
+  function wire(card) {
+    var id = card.getAttribute('data-video');
+    var video = card.querySelector('video');
+    if (seen[id]) { show(card); }
+    if (!video) { return; }
+    video.addEventListener('ended', function () {
+      show(card);
+      var now = read();
+      now[id] = 1;
+      save(now);
+    });
+    /* um video por vez: ao dar play num, pausa os outros (evita dois audios juntos) */
+    video.addEventListener('play', function () {
+      for (var j = 0; j < videos.length; j++) {
+        if (videos[j] !== video && !videos[j].paused) { videos[j].pause(); }
+      }
+    });
+  }
+  for (var i = 0; i < cards.length; i++) { wire(cards[i]); }
+})();
+</script>
+
+</body>
+</html>
