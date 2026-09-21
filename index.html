@@ -4,6 +4,12 @@
   Arquivo unico, CSS inline, 1 script inline pequeno no fim, zero dependencia externa, zero pixel.
   DISCRETA de proposito: titulo da aba, cabecalho e topo NAO citam o tema do curso. Nao colocar o tema aqui.
 
+  CAPA DE TOQUE: cada player tem um <button class="cover"> por cima ("Tocca qui per guardare il Video N").
+  No HTML ela vem hidden e o <video> vem com controls: SEM JavaScript a pagina e o player nativo normal.
+  O script do fim mostra a capa, tira o controls e, no toque, da play + tela cheia. Os 2 textos da capa ficam
+  nos atributos data-label-play / data-label-replay de cada botao (trocar nos 3 cartoes).
+  Os <video> NAO tem playsinline de proposito: no iPhone o Safari abre a tela cheia sozinho ao dar play.
+
   PLACEHOLDERS PRA TROCAR ANTES DE SUBIR (buscar por "{{" no editor; nao pode sobrar nenhum):
     {{MARCA}}                 nome neutro da marca (cabecalho).
     VIDEOS (ja preenchido)    ficam em videos/ (caminho RELATIVO no <source>: videos/video-1.mp4, -2, -3). Nunca URL absoluta.
@@ -22,7 +28,8 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F1EA">
 <title>I tuoi video</title>
 <meta name="description" content="I tuoi 3 video e i tuoi 2 documenti.">
 <meta name="robots" content="noindex,nofollow">
@@ -45,6 +52,10 @@
     padding-bottom:calc(5.6rem + env(safe-area-inset-bottom));
   }
   .wrap{max-width:720px;margin:0 auto;padding:0 20px}
+  /* viewport-fit=cover: no iPhone deitado o conteudo nao entra debaixo do recorte da camera */
+  @supports (padding:max(0px)){
+    .wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+  }
   h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:700}
   h1{font-size:1.65rem;line-height:1.2;margin:0 0 1rem;letter-spacing:-.2px}
   h2{font-size:1.35rem;line-height:1.25;margin:0 0 .8rem}
@@ -97,6 +108,36 @@
     background:var(--ink);border:1px solid var(--line);border-radius:12px;overflow:hidden;
   }
   .video video{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:var(--ink)}
+
+  /* capa de toque: cobre o player inteiro. Vem hidden no HTML; quem mostra e o script (sem JS = player nativo) */
+  .cover{
+    position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    margin:0;padding:8px 12px;border:0;border-radius:0;cursor:pointer;
+    background:var(--teal);color:#FFFFFF;text-align:center;
+    font-family:inherit;font-size:1rem;font-weight:700;line-height:1.2;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    -webkit-appearance:none;appearance:none;
+  }
+  .cover:hover,.cover:active{background:var(--teal-dark)}
+  .cover-icon{flex:0 0 auto;display:block;width:72px;height:72px;width:clamp(72px,22vw,112px);height:clamp(72px,22vw,112px);margin:0 0 8px}
+  .cover:active .cover-icon{opacity:.8}
+  .cover-text{display:block;max-width:24em}
+  .cover:focus{outline:4px solid #FFFFFF;outline-offset:-8px}
+  .cover:focus:not(:focus-visible){outline:none}
+  .cover:focus-visible{outline:4px solid #FFFFFF;outline-offset:-8px}
+  /* tela muito estreita: icone ao lado do texto, senao o texto de 20px nao cabe na altura do player */
+  @media (max-width:349px){
+    .cover{flex-direction:row;text-align:left;padding:6px 8px}
+    .cover-icon{margin:0 10px 0 0}
+  }
+  /* navegador atual: a caixa cresce se o texto da capa precisar de mais altura que 16:9 (fonte do sistema aumentada),
+     em vez de cortar. Navegador antigo fica na caixa 16:9 fixa de cima. */
+  @supports (aspect-ratio:16/9){
+    .video{padding-top:0;display:grid}
+    .video video{position:static;grid-area:1/1;align-self:center;height:auto;aspect-ratio:16/9}
+    .cover{position:static;grid-area:1/1;height:auto;align-self:stretch}
+  }
   .next-hint{margin:1rem 0 1.6rem;padding:0 .2rem;text-align:center}
 
   /* botoes */
@@ -106,12 +147,15 @@
     background:var(--teal);color:#FFFFFF;text-decoration:none;
     font-size:1.05rem;font-weight:700;line-height:1.25;
     border:0;border-bottom:4px solid var(--teal-dark);border-radius:14px;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   }
   .btn:hover{background:var(--teal-dark)}
+  /* feedback de toque: o botao escurece e "afunda" 2px (instantaneo, sem animacao) */
+  .btn:active{background:var(--teal-dark);transform:translateY(2px)}
   .btn + .btn{margin-top:1rem}
   .btn svg{flex:0 0 auto;width:1.5rem;height:1.5rem;margin-right:.6rem}
   .btn-wa{background:var(--wa);border-bottom-color:var(--wa-dark)}
-  .btn-wa:hover{background:var(--wa-dark)}
+  .btn-wa:hover,.btn-wa:active{background:var(--wa-dark)}
 
   .email-plain{margin:1.2rem 0 0;padding:.8rem 14px;background:var(--card);border:1px solid var(--line);border-radius:14px}
   .email-plain strong{display:block;overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
@@ -127,7 +171,7 @@
     min-height:3rem;padding:.4rem 1rem;
     background:var(--card);color:var(--teal);border:3px solid var(--teal);
   }
-  .helpbar .btn:hover{background:var(--seen-bg)}
+  .helpbar .btn:hover,.helpbar .btn:active{background:var(--seen-bg)}
 
   /* rodape */
   footer{padding:.4rem 0 1rem}
@@ -139,7 +183,8 @@
   .notice p:last-child{margin-bottom:0}
   .legal{font-size:.85rem;line-height:1.6;color:var(--gray-strong);margin-top:1.2rem}
   .legal p{margin:0 0 .5rem}
-  .legal a{color:var(--teal);display:inline-block;padding:.6rem 0;overflow-wrap:anywhere}
+  .legal a{color:var(--teal);display:inline-block;padding:.6rem 0;overflow-wrap:anywhere;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .legal a:active{color:var(--ink)}
   .links{margin:0}
   .links a{display:block;padding:.6rem 0;margin-top:1rem}
 
@@ -151,6 +196,8 @@
     .hero{padding:2.4rem 0 .6rem}
     .card{padding:1.7rem 1.8rem}
     .notice{padding:1.7rem 1.8rem}
+    .cover{font-size:1.25rem}
+    .cover-icon{margin-bottom:14px}
   }
 
   /* celular deitado: some a barra (nao come o video) e o video cabe inteiro na tela */
@@ -200,10 +247,17 @@
         <h2 id="v1-titolo">Cosa c'è di vero</h2>
         <p class="dur">Circa 6 minuti</p>
         <div class="video-box"><div class="video">
-          <video controls preload="none" playsinline poster="img/video-1.jpg" aria-labelledby="v1-titolo">
+          <video controls preload="none" poster="img/video-1.jpg" aria-labelledby="v1-titolo">
             <source src="videos/video-1.mp4" type="video/mp4">
             Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
           </video>
+          <button type="button" class="cover" data-cover hidden
+                  data-label-play="Tocca qui per guardare il Video 1"
+                  data-label-replay="Hai visto il Video 1. Tocca qui per rivederlo."
+                  aria-label="Tocca qui per guardare il Video 1">
+            <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
+            <span class="cover-text" data-cover-text>Tocca qui per guardare il Video 1</span>
+          </button>
         </div></div>
       </article>
 
@@ -211,8 +265,9 @@
       <div class="card top-ocre how" role="group" aria-labelledby="come">
         <h2 id="come">Se non sai come far partire il video</h2>
         <ol class="steps">
-          <li>Tocca il triangolo&nbsp;&#9654;&#xFE0E; al centro del video.</li>
-          <li>Per vederlo grande, gira il telefono in orizzontale oppure tocca il quadratino in basso a destra del video.</li>
+          <li>Tocca il grande pulsante con il triangolo&nbsp;&#9654;&#xFE0E; e la scritta «Tocca qui per guardare».</li>
+          <li>Il video si apre a tutto schermo. Gira il telefono in orizzontale: si vede più grande.</li>
+          <li>Quando il video finisce, torni da solo a questa pagina.</li>
           <li>Se il video si ferma, controlla la connessione a internet e tocca di nuovo&nbsp;&#9654;&#xFE0E;.</li>
         </ol>
       </div>
@@ -226,10 +281,17 @@
         <h2 id="v2-titolo">Il primo passo che nessuno ti vende</h2>
         <p class="dur">Circa 7 minuti</p>
         <div class="video-box"><div class="video">
-          <video controls preload="none" playsinline poster="img/video-2.jpg" aria-labelledby="v2-titolo">
+          <video controls preload="none" poster="img/video-2.jpg" aria-labelledby="v2-titolo">
             <source src="videos/video-2.mp4" type="video/mp4">
             Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
           </video>
+          <button type="button" class="cover" data-cover hidden
+                  data-label-play="Tocca qui per guardare il Video 2"
+                  data-label-replay="Hai visto il Video 2. Tocca qui per rivederlo."
+                  aria-label="Tocca qui per guardare il Video 2">
+            <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
+            <span class="cover-text" data-cover-text>Tocca qui per guardare il Video 2</span>
+          </button>
         </div></div>
       </article>
       <p class="next-hint">Quando hai finito, scendi: sotto c'è il Video 3.</p>
@@ -242,10 +304,17 @@
         <h2 id="v3-titolo">Cosa fare domani mattina (e cosa chiedere al medico)</h2>
         <p class="dur">Circa 7 minuti</p>
         <div class="video-box"><div class="video">
-          <video controls preload="none" playsinline poster="img/video-3.jpg" aria-labelledby="v3-titolo">
+          <video controls preload="none" poster="img/video-3.jpg" aria-labelledby="v3-titolo">
             <source src="videos/video-3.mp4" type="video/mp4">
             Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
           </video>
+          <button type="button" class="cover" data-cover hidden
+                  data-label-play="Tocca qui per guardare il Video 3"
+                  data-label-replay="Hai visto il Video 3. Tocca qui per rivederlo."
+                  aria-label="Tocca qui per guardare il Video 3">
+            <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
+            <span class="cover-text" data-cover-text>Tocca qui per guardare il Video 3</span>
+          </button>
         </div></div>
       </article>
 
@@ -318,8 +387,10 @@
 </nav>
 
 <script>
-/* Selo "Gia visto": aparece quando o video termina e fica guardado no aparelho.
-   Sem localStorage (bloqueado, modo privado) a pagina funciona igual, so nao lembra. */
+/* 1) Capa de toque: mostra o botao grande por cima de cada player e tira os controles nativos.
+      No toque: play + tela cheia (tudo dentro do clique, senao o navegador bloqueia).
+   2) Fim do video: sai da tela cheia, mostra o selo "Gia visto" (guardado no aparelho) e a capa em modo "rever".
+   Sem localStorage (bloqueado, modo privado) funciona igual, so nao lembra. Nada aqui rola a pagina. */
 (function () {
   var KEY = 'video-visti';
   function read() {
@@ -331,23 +402,105 @@
   function save(o) {
     try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {}
   }
-  function show(card) {
+  function showBadge(card) {
     var badge = card.querySelector('[data-seen]');
     if (badge) { badge.removeAttribute('hidden'); }
   }
+
+  /* capa: state = 'play' | 'replay' | null (esconde). Capa visivel = video sem controls; capa escondida = com controls */
+  function setCover(card, state) {
+    var cover = card.querySelector('[data-cover]');
+    var video = card.querySelector('video');
+    if (!cover || !video) { return; }
+    if (!state) {
+      cover.setAttribute('hidden', '');
+      video.setAttribute('controls', '');
+      return;
+    }
+    var label = cover.getAttribute(state === 'replay' ? 'data-label-replay' : 'data-label-play') || '';
+    var text = cover.querySelector('[data-cover-text]');
+    if (text) { text.textContent = label; }
+    cover.setAttribute('aria-label', label);
+    cover.setAttribute('data-state', state);
+    video.removeAttribute('controls');
+    cover.removeAttribute('hidden');
+  }
+
+  /* tela cheia: tudo em try/catch, falha silenciosa (iPhone nao tem requestFullscreen: la o Safari abre sozinho no play) */
+  function lockLandscape() {
+    try {
+      var o = window.screen && window.screen.orientation;
+      if (o && o.lock) { var p = o.lock('landscape'); if (p && p.catch) { p.catch(function () {}); } }
+    } catch (e) {}
+  }
+  function unlockOrientation() {
+    try {
+      var o = window.screen && window.screen.orientation;
+      if (o && o.unlock) { o.unlock(); }
+    } catch (e) {}
+  }
+  function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function enterFullscreen(video) {
+    try {
+      var req = video.requestFullscreen || video.webkitRequestFullscreen || video.webkitRequestFullScreen;
+      if (!req) { return; }
+      var p = req.call(video);
+      if (p && p.catch) { p.catch(function () {}); }
+    } catch (e) {}
+  }
+  function exitFullscreen(video) {
+    try {
+      if (fullscreenElement()) {
+        var ex = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
+        if (ex) { var p = ex.call(document); if (p && p.catch) { p.catch(function () {}); } }
+      }
+    } catch (e) {}
+    try {
+      if (video.webkitDisplayingFullscreen && video.webkitExitFullscreen) { video.webkitExitFullscreen(); }
+    } catch (e) {}
+    unlockOrientation();
+  }
+  function onFullscreenChange() { if (fullscreenElement()) { lockLandscape(); } else { unlockOrientation(); } }
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
   var cards = document.querySelectorAll('[data-video]');
   var videos = document.querySelectorAll('video');
   var seen = read();
+
   function wire(card) {
     var id = card.getAttribute('data-video');
     var video = card.querySelector('video');
-    if (seen[id]) { show(card); }
+    var cover = card.querySelector('[data-cover]');
+    if (seen[id]) { showBadge(card); }
     if (!video) { return; }
+
+    if (cover) {
+      setCover(card, seen[id] ? 'replay' : 'play');
+      cover.addEventListener('click', function () {
+        var before = cover.getAttribute('data-state') || 'play';
+        setCover(card, null);
+        /* depois de uma falha de rede o play sozinho nao tenta de novo: recarrega a fonte antes */
+        try { if (video.error || video.networkState === 3) { video.load(); } } catch (e) {}
+        var p;
+        try { p = video.play(); } catch (e) { setCover(card, before); return; }
+        if (p && p.catch) {
+          p.catch(function () {
+            if (video.paused) { exitFullscreen(video); setCover(card, before); }
+          });
+        }
+        enterFullscreen(video);
+        try { video.focus({ preventScroll: true }); } catch (e) {}
+      });
+    }
+
     video.addEventListener('ended', function () {
-      show(card);
+      exitFullscreen(video);
+      showBadge(card);
       var now = read();
       now[id] = 1;
       save(now);
+      if (cover) { setCover(card, 'replay'); }
     });
     /* um video por vez: ao dar play num, pausa os outros (evita dois audios juntos) */
     video.addEventListener('play', function () {
