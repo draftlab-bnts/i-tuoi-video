@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<!--
+  LA TUA ANALISI PERSONALIZZATA (area membri, v2). Pagina unica pra celular.
+  JS puro, zero rede, zero lib, fonte do sistema. Nada e enviado: o calculo roda no aparelho.
+  6 perguntas = as mesmas do quiz (s1 eta, s2 fumo, s4 attivita, s11 alcol, s12 diagnosi, s14 sonno), texto e opcoes identicos.
+  Resultado: perfil A/B/C/D + dose + calendario dos primeiros 10 dias (datas a partir de hoje) + 3 dicas.
+  localStorage: so pra reabrir no resultado; tudo em try/catch; sem ele funciona igual.
+  Regras de perfil (mesmas do PDF, pag. 5): D = 65+ ou diagnosi "Si, uno o piu" · C = 45-64 · B = ate 44 com >=1 fattore
+  (fumo tutti i giorni/in compagnia, alcol regolarmente, sonno < 5 ore, sedentario) · A = ate 44 senza fattori.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F1EA">
+<title>La tua Analisi Personalizzata</title>
+<meta name="description" content="Sei domande, un minuto: il tuo profilo, la tua dose e il calendario dei primi 10 giorni.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<style>
+  :root{
+    --bg:#F5F1EA; --ink:#1B2530; --teal:#0E5A60; --teal-dark:#0A464B; --ocre:#B9802A; --ocre-dark:#8E6220;
+    --gray-strong:#59626E; --line:#E2DCD1; --card:#FFFFFF; --soft:#E4F0EC;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  [hidden]{display:none !important}
+  /* base 125%: 1rem = 20px (cresce junto se il telefono usa il carattere grande) */
+  html{font-size:125%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:1rem;line-height:1.5;overflow-wrap:break-word;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 20px}
+  @supports (padding:max(0px)){
+    .wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+  }
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:700;margin:0}
+  h1{font-size:1.65rem;line-height:1.2;margin-bottom:.8rem}
+  h2{font-size:1.4rem;line-height:1.25;margin-bottom:1rem}
+  h3{font-size:1.15rem;line-height:1.25;margin-bottom:.6rem}
+  p{margin:0 0 .8rem}
+  strong{font-weight:700}
+  a{color:var(--teal)}
+
+  .site-head{border-bottom:1px solid var(--line);padding:14px 0}
+  .brand{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1rem;color:var(--ink)}
+
+  .screen{padding:1.4rem 0 2rem}
+  .lead{font-size:1.05rem}
+
+  /* progresso */
+  .progress{margin:0 0 .5rem;font-size:.95rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal)}
+  .bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:0 0 1.2rem}
+  .bar i{display:block;height:100%;width:0;background:var(--teal)}
+
+  /* botoes: >= 64px de altura, texto >= 20px, largura da coluna */
+  .btn{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    width:100%;min-height:3.2rem;padding:.7rem 1rem;margin:0;
+    background:var(--teal);color:#FFFFFF;text-decoration:none;
+    font-family:inherit;font-size:1.05rem;font-weight:700;line-height:1.25;
+    border:0;border-bottom:4px solid var(--teal-dark);border-radius:14px;cursor:pointer;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none;
+  }
+  .btn:hover{background:var(--teal-dark)}
+  .btn:active{background:var(--teal-dark);transform:translateY(2px)}
+  .btn + .btn{margin-top:.9rem}
+  .btn:focus{outline:4px solid var(--ink);outline-offset:3px}
+  .btn:focus:not(:focus-visible){outline:none}
+  .btn:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+  .btn-ocre{background:var(--ocre);border-bottom-color:var(--ocre-dark)}
+  .btn-ocre:hover,.btn-ocre:active{background:var(--ocre-dark)}
+  /* opcoes de resposta: fundo branco, borda petroleo, texto a esquerda */
+  .opt{
+    background:var(--card);color:var(--ink);justify-content:flex-start;text-align:left;
+    border:3px solid var(--teal);border-bottom-width:5px;font-weight:600;
+  }
+  .opt:hover{background:var(--soft)}
+  .opt:active{background:var(--soft);transform:translateY(2px)}
+  .opt + .opt{margin-top:.8rem}
+  .link{
+    display:inline-flex;align-items:center;min-height:3rem;padding:.6rem 0;margin:.6rem 0 0;
+    background:none;border:0;color:var(--teal);font-family:inherit;font-size:1rem;font-weight:700;
+    text-decoration:underline;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  }
+  .link:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+
+  /* cartoes do resultado */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2rem 16px;margin:0 0 1rem}
+  .card.top-teal{border-top:5px solid var(--teal)}
+  .card.top-ocre{border-top:5px solid var(--ocre)}
+  .card p:last-child{margin-bottom:0}
+  .kicker{margin:0 0 .3rem;font-size:.95rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal)}
+  .profile{font-family:Georgia,"Times New Roman",serif;font-size:2rem;line-height:1.1;margin:0 0 .6rem}
+  .profile span{color:var(--teal)}
+  .card.top-ocre .profile span{color:var(--ocre)}
+
+  table{width:100%;border-collapse:collapse;font-size:1rem}
+  td{padding:.55rem 0;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.35}
+  tr:last-child td{border-bottom:0}
+  td:first-child{color:var(--gray-strong);padding-right:.8rem;width:50%}
+  td:last-child{font-weight:700;text-align:right}
+  td small{display:block;font-size:.9rem;font-weight:400;color:var(--gray-strong)}
+
+  .cal{list-style:none;margin:0;padding:0}
+  .cal li{display:flex;align-items:center;gap:.6rem;padding:.5rem .4rem;border-bottom:1px solid var(--line);border-radius:8px}
+  .cal li:last-child{border-bottom:0}
+  .cal li.on{background:var(--soft)}
+  .cal .txt{flex:1 1 auto;min-width:0}
+  .cal .n{display:block;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:1.05rem;line-height:1.25}
+  .cal .d{display:block;line-height:1.3}
+  .cal .tag{flex:0 0 auto;font-size:.9rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:.2rem .6rem;border-radius:999px;border:2px solid var(--line);color:var(--gray-strong);white-space:nowrap}
+  .cal li.on .tag{background:var(--teal);border-color:var(--teal);color:#FFFFFF}
+
+  ol.tips{margin:0;padding:0;list-style:none;counter-reset:t}
+  ol.tips li{position:relative;counter-increment:t;padding:0 0 0 2.6rem;margin:0 0 .9rem;min-height:2rem}
+  ol.tips li:last-child{margin-bottom:0}
+  ol.tips li::before{
+    content:counter(t);position:absolute;left:0;top:0;width:2rem;height:2rem;
+    display:flex;align-items:center;justify-content:center;
+    border:3px solid var(--ocre);border-radius:50%;background:var(--card);
+    font-weight:700;font-size:1.05rem;line-height:1;color:var(--ink);
+  }
+  .note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ocre);border-radius:14px;padding:.8rem .9rem;margin:0 0 1rem;font-size:.95rem}
+  .note p:last-child{margin-bottom:0}
+  .notice{background:var(--ink);color:#FFFFFF;border-radius:18px;padding:1.1rem 1.1rem;margin:0 0 1rem}
+  .notice p:last-child{margin-bottom:0}
+  .notice strong{color:#FFFFFF}
+
+  footer{padding:.4rem 0 1.6rem;border-top:1px solid var(--line);margin-top:1rem}
+  .legal{font-size:.9rem;line-height:1.6;color:var(--gray-strong)}
+  .legal p{margin:.8rem 0 .4rem}
+  /* alvo de toque >= 60px tambem nos links do rodape */
+  .legal a{display:inline-flex;align-items:center;min-height:3rem;padding:.4rem 0;overflow-wrap:anywhere;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+  @media (min-width:700px){
+    body{font-size:1.05rem}
+    h1{font-size:2.1rem}
+    h2{font-size:1.6rem}
+    .card{padding:1.6rem 1.8rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <p class="brand">Il Trucco del Bicarbonato</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- 0. Intro -->
+  <section id="intro" class="screen" aria-labelledby="titolo">
+    <div class="wrap">
+      <h1 id="titolo">La tua Analisi Personalizzata</h1>
+      <p class="lead">Sei domande, le stesse del test. Un minuto. Alla fine trovi il tuo profilo, la tua dose e il calendario dei primi 10 giorni.</p>
+      <p>Non viene inviato niente: il calcolo resta sul tuo telefono.</p>
+      <button type="button" class="btn" id="start">Inizia l’analisi</button>
+    </div>
+  </section>
+
+  <!-- 1-6. Domande (una per schermata) -->
+  <section id="quiz" class="screen" aria-labelledby="qtitle" hidden>
+    <div class="wrap">
+      <p class="progress">Domanda <span id="qn">1</span> di 6</p>
+      <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+      <h2 id="qtitle"></h2>
+      <div id="opts" role="group" aria-labelledby="qtitle"></div>
+      <button type="button" class="link" id="back" hidden>&#8592; Torna alla domanda precedente</button>
+    </div>
+  </section>
+
+  <!-- 7. Risultato -->
+  <section id="result" class="screen" aria-labelledby="rtitle" hidden>
+    <div class="wrap">
+      <h1 id="rtitle">Ecco la tua analisi</h1>
+
+      <div class="card top-teal" id="profcard">
+        <p class="kicker">Il tuo profilo</p>
+        <p class="profile"><span id="pletter"></span> &middot; <span id="pname"></span></p>
+        <p id="pwhy"></p>
+      </div>
+
+      <div class="card">
+        <h3>La tua dose &middot; un bicchiere da 250 ml</h3>
+        <table>
+          <tbody>
+            <tr><td>Acqua tiepida</td><td>250 ml<small>non bollente</small></td></tr>
+            <tr><td>Bicarbonato di sodio</td><td id="d-bic"></td></tr>
+            <tr><td>Succo di limone</td><td id="d-lim"></td></tr>
+            <tr><td>Zenzero fresco grattugiato</td><td id="d-zen"></td></tr>
+            <tr><td>&hellip;oppure zenzero in polvere</td><td id="d-zenp"></td></tr>
+            <tr><td>Curcuma in polvere</td><td id="d-cur"></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="notice">
+        <p><strong>Quando:</strong> al mattino appena sveglio, 30–60 minuti prima di colazione. Oppure la sera, almeno 2 ore dopo cena. A 2 ore da qualsiasi farmaco.</p>
+        <p><strong>Quante volte:</strong> un bicchiere ogni 3 giorni. Mai due giorni di fila. Mai più di mezzo cucchiaino di bicarbonato.</p>
+      </div>
+
+      <div class="card">
+        <h3>I tuoi primi 10 giorni</h3>
+        <p>A partire da oggi. I giorni colorati sono quelli del bicchiere: 1, 4, 7 e 10.</p>
+        <ol class="cal" id="cal"></ol>
+      </div>
+
+      <div class="card top-ocre">
+        <h3>Tre consigli per il tuo profilo</h3>
+        <ol class="tips" id="tips"></ol>
+      </div>
+
+      <div id="extra"></div>
+
+      <p>La ricetta passo dopo passo, i 7 errori da evitare e la pagina «Chi deve parlare col medico prima» li trovi nel PDF <strong>Il Protocollo del Bicarbonato</strong>, nell’area membri.</p>
+
+      <button type="button" class="btn btn-ocre" id="redo">Rifai l’analisi</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap legal">
+    <p>Hai una domanda? Scrivici: <a href="mailto:support@bntslab.online">support@bntslab.online</a> oppure su WhatsApp al <a href="https://wa.me/595985256963" rel="noopener">+595 985 256963</a>. Ti risponde una persona, in italiano.</p>
+  </div>
+</footer>
+
+<script>
+/* Tutto in un'unica funzione. Nessuna richiesta di rete. localStorage solo per riaprire sul risultato: in try/catch, opzionale. */
+(function () {
+  'use strict';
+  var KEY = 'analisi-v2';
+
+  /* Le 6 domande: testo e opzioni IDENTICI al quiz (s1, s2, s4, s11, s12, s14), nello stesso ordine. */
+  var Q = [
+    { id: 'eta',      title: 'Per personalizzare la tua ricetta, seleziona la tua età:', opts: ['65+', '55–64', '45–54', '35–44', 'Meno di 35 anni'] },
+    { id: 'fumo',     title: 'Fumi?', opts: ['Sì, tutti i giorni', 'Sì, solo in compagnia', 'No, ma fumavo prima', 'Non fumo'] },
+    { id: 'sport',    title: 'Fai attività fisica regolarmente?', opts: ['No, sono sedentario', 'Da 1 a 2 volte a settimana', 'Da 3 a 5 volte a settimana', 'Tutti i giorni'] },
+    { id: 'alcol',    title: 'Bevi alcolici?', opts: ['Sì, regolarmente', 'Ogni tanto', 'Raramente', 'Non bevo'] },
+    { id: 'diagnosi', title: 'Ti hanno mai diagnosticato uno di questi problemi: diabete, pressione alta o colesterolo alto?', opts: ['Sì, uno o più', 'Non ne sono sicuro', 'No, nessuno dei tre'] },
+    { id: 'sonno',    title: 'Quante ore dormi a notte?', opts: ['Meno di 5 ore', 'Tra 5 e 7 ore', 'Tra 7 e 9 ore', 'Più di 9 ore'] }
+  ];
+
+  var PROFILI = {
+    A: { nome: 'Base',     bic: '1/2 cucchiaino raso', bicg: 'circa 2,5 g', lim: '1/2 limone',      zen: '1 cm', zenc: 'circa 1 cucchiaino',  zenp: '1/2 cucchiaino', cur: '1/4 di cucchiaino',
+         tips: ['La ricetta base così com’è: non aggiungere niente per «fare di più».',
+                'Scegli l’orario, mattino o sera, e tienilo per tutti i 30 giorni.',
+                'Nei giorni di pausa: acqua durante la giornata e, se puoi, una camminata.'] },
+    B: { nome: 'Attivo',   bic: '1/2 cucchiaino raso', bicg: 'circa 2,5 g', lim: '1 limone intero', zen: '2 cm', zenc: 'circa 2 cucchiaini', zenp: '1 cucchiaino',   cur: '1/2 cucchiaino',
+         tips: ['Dose piena di limone, zenzero e curcuma: non ridurla.',
+                'La sera del bicchiere, niente alcol. Il giorno dopo fai come vuoi.',
+                'Se fumi: la prima sigaretta dopo colazione, mai prima del bicchiere.'] },
+    C: { nome: 'Maturo',   bic: '1/2 cucchiaino raso', bicg: 'circa 2,5 g', lim: '1 limone intero', zen: '2 cm', zenc: 'circa 2 cucchiaini', zenp: '1 cucchiaino',   cur: '1/2 cucchiaino',
+         tips: ['Dose piena di limone, zenzero e curcuma; bicarbonato sempre mezzo cucchiaino.',
+                'Il primo bicchiere in un giorno tranquillo, a casa. Dal secondo, orario fisso.',
+                'Se non misuri la pressione da più di un anno, misurala in farmacia prima di iniziare. Se è alta, passi al profilo D.'] },
+    D: { nome: 'Delicato', bic: '1/4 di cucchiaino',   bicg: 'circa 1,2 g', lim: '1/2 limone',      zen: '1 cm', zenc: 'circa 1 cucchiaino',  zenp: '1/2 cucchiaino', cur: '1/4 di cucchiaino',
+         tips: ['Bicarbonato a un quarto di cucchiaino: è la tua dose, non serve di più.',
+                'Prima del primo bicchiere leggi la pagina 9 del Protocollo. Se prendi farmaci, chiedi al farmacista quando metterlo (a 2 ore di distanza).',
+                'Pillole al mattino? Il bicchiere la sera, 2 ore dopo cena. Pillole la sera? Il bicchiere al mattino.'] }
+  };
+
+  /* a = indice della risposta per ogni domanda (0 = prima opzione). Ritorna { p, perche, fattori } */
+  function calcola(a) {
+    var eta = a.eta, diag = a.diagnosi === 0;
+    var fattori = [];
+    if (a.fumo === 0 || a.fumo === 1) fattori.push('fumo');
+    if (a.alcol === 0) fattori.push('alcol regolare');
+    if (a.sonno === 0) fattori.push('meno di 5 ore di sonno');
+    if (a.sport === 0) fattori.push('vita sedentaria');
+    if (eta === 0 || diag) {
+      var m = [];
+      if (eta === 0) m.push('hai 65 anni o più');
+      if (diag) m.push('hai una diagnosi di pressione alta, diabete o colesterolo alto');
+      return { p: 'D', perche: 'Perché ' + m.join(' e ') + '. Il bicarbonato scende a un quarto di cucchiaino: è la dose giusta per te.', fattori: fattori };
+    }
+    if (eta === 1 || eta === 2) return { p: 'C', perche: 'Perché hai tra 45 e 64 anni. Limone, zenzero e curcuma a dose piena; bicarbonato base.', fattori: fattori };
+    if (fattori.length) return { p: 'B', perche: 'Perché hai meno di 45 anni e almeno un fattore che conta: ' + fattori.join(', ') + '. Limone, zenzero e curcuma a dose piena.', fattori: fattori };
+    return { p: 'A', perche: 'Perché hai meno di 45 anni e nessuno dei quattro fattori (fumo, alcol regolare, poco sonno, vita sedentaria). La ricetta base così com’è.', fattori: fattori };
+  }
+  window.AnalisiCalc = calcola; /* esposto solo per il test automatico (_tool/valida.mjs) */
+
+  var GIORNI = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+  var MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  function dataIT(d) { return GIORNI[d.getDay()] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()]; }
+
+  function load() {
+    try {
+      var o = JSON.parse(window.localStorage.getItem(KEY) || 'null');
+      if (!o || typeof o !== 'object' || !o.a || typeof o.a !== 'object') return null;
+      for (var i = 0; i < Q.length; i++) { var v = o.a[Q[i].id]; if (typeof v !== 'number' || v < 0 || v >= Q[i].opts.length) return null; }
+      return o.a;
+    } catch (e) { return null; }
+  }
+  function save(a) { try { window.localStorage.setItem(KEY, JSON.stringify({ a: a, t: Date.now() })); } catch (e) {} }
+  function clear() { try { window.localStorage.removeItem(KEY); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var intro = $('intro'), quiz = $('quiz'), result = $('result');
+  var answers = {}, step = 0;
+
+  function show(el) {
+    intro.setAttribute('hidden', ''); quiz.setAttribute('hidden', ''); result.setAttribute('hidden', '');
+    el.removeAttribute('hidden');
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+
+  function renderQuestion() {
+    var q = Q[step];
+    $('qn').textContent = String(step + 1);
+    $('barfill').style.width = Math.round(((step) / Q.length) * 100) + '%';
+    $('qtitle').textContent = q.title;
+    var box = $('opts');
+    while (box.firstChild) box.removeChild(box.firstChild);
+    for (var i = 0; i < q.opts.length; i++) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn opt'; b.textContent = q.opts[i]; b.setAttribute('data-i', String(i));
+      b.addEventListener('click', onAnswer);
+      box.appendChild(b);
+    }
+    if (step > 0) $('back').removeAttribute('hidden'); else $('back').setAttribute('hidden', '');
+    show(quiz);
+    try { $('qtitle').focus({ preventScroll: true }); } catch (e) {}
+  }
+  function onAnswer(ev) {
+    var i = parseInt(ev.currentTarget.getAttribute('data-i'), 10);
+    answers[Q[step].id] = i;
+    if (step < Q.length - 1) { step++; renderQuestion(); }
+    else { save(answers); renderResult(answers); }
+  }
+
+  function renderResult(a) {
+    var r = calcola(a), P = PROFILI[r.p];
+    $('pletter').textContent = r.p; $('pname').textContent = P.nome; $('pwhy').textContent = r.perche;
+    $('profcard').className = 'card ' + (r.p === 'D' ? 'top-ocre' : 'top-teal');
+    $('d-bic').innerHTML = ''; $('d-bic').appendChild(document.createTextNode(P.bic));
+    var s1 = document.createElement('small'); s1.textContent = P.bicg; $('d-bic').appendChild(s1);
+    $('d-lim').textContent = P.lim;
+    $('d-zen').innerHTML = ''; $('d-zen').appendChild(document.createTextNode(P.zen));
+    var s2 = document.createElement('small'); s2.textContent = P.zenc; $('d-zen').appendChild(s2);
+    $('d-zenp').textContent = P.zenp;
+    $('d-cur').textContent = P.cur;
+
+    var cal = $('cal'); while (cal.firstChild) cal.removeChild(cal.firstChild);
+    var oggi = new Date(); oggi.setHours(12, 0, 0, 0);
+    for (var g = 1; g <= 10; g++) {
+      var d = new Date(oggi.getTime()); d.setDate(oggi.getDate() + (g - 1));
+      var on = (g - 1) % 3 === 0;
+      var li = document.createElement('li'); if (on) li.className = 'on';
+      var n = document.createElement('span'); n.className = 'n'; n.textContent = 'Giorno ' + g;
+      var dd = document.createElement('span'); dd.className = 'd'; dd.textContent = dataIT(d) + (g === 1 ? ' (oggi)' : '');
+      var t = document.createElement('span'); t.className = 'tag'; t.textContent = on ? 'Bevi' : 'Pausa';
+      var txt = document.createElement('span'); txt.className = 'txt'; txt.appendChild(n); txt.appendChild(dd);
+      li.appendChild(txt); li.appendChild(t); cal.appendChild(li);
+    }
+
+    var tips = $('tips'); while (tips.firstChild) tips.removeChild(tips.firstChild);
+    for (var k = 0; k < P.tips.length; k++) { var tl = document.createElement('li'); tl.textContent = P.tips[k]; tips.appendChild(tl); }
+
+    var extra = $('extra'); while (extra.firstChild) extra.removeChild(extra.firstChild);
+    var notes = [];
+    if (r.p !== 'D' && a.diagnosi === 1) notes.push('Non sei sicuro della pressione? Misurala in farmacia prima del primo bicchiere: un minuto, pochi euro. Se è alta, il tuo profilo è D: un quarto di cucchiaino.');
+    if (r.p !== 'D') notes.push('Se il medico ti ha prescritto una dieta povera di sodio, usa il profilo D: un quarto di cucchiaino di bicarbonato.');
+    if (r.p === 'D') notes.push('Prima del primo bicchiere leggi la pagina 9 del Protocollo: «Chi deve parlare col medico prima». Due minuti, e parti tranquillo.');
+    if (r.p === 'C' && r.fattori.length) notes.push('Hai segnato anche: ' + r.fattori.join(', ') + '. Vale anche per te il consiglio del profilo B: la sera del bicchiere niente alcol e, se fumi, la prima sigaretta dopo colazione.');
+    for (var x = 0; x < notes.length; x++) { var nb = document.createElement('div'); nb.className = 'note'; var np = document.createElement('p'); np.textContent = notes[x]; nb.appendChild(np); extra.appendChild(nb); }
+
+    show(result);
+  }
+
+  $('start').addEventListener('click', function () { answers = {}; step = 0; renderQuestion(); });
+  $('back').addEventListener('click', function () { if (step > 0) { step--; renderQuestion(); } });
+  $('redo').addEventListener('click', function () { clear(); answers = {}; step = 0; renderQuestion(); });
+
+  /* riapre sul risultato se c'è un'analisi salvata; altrimenti intro */
+  var saved = load();
+  if (saved) { answers = saved; renderResult(saved); } else { show(intro); }
+})();
+</script>
+
+</body>
+</html>
