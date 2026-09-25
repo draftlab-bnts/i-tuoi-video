@@ -1,155 +1,46 @@
 <!DOCTYPE html>
 <!--
-  LA TUA ANALISI PERSONALIZZATA (area membri, v2). Pagina unica pra celular.
-  JS puro, zero rede, zero lib, fonte do sistema. Nada e enviado: o calculo roda no aparelho.
+  LA TUA ANALISI PERSONALIZZATA (area membri, v3: mesmo design system do index.html via ../app.css). Pagina unica pra celular.
+  JS puro, zero rede, zero lib. Nada e enviado: o calculo roda no aparelho.
   6 perguntas = as mesmas do quiz (s1 eta, s2 fumo, s4 attivita, s11 alcol, s12 diagnosi, s14 sonno), texto e opcoes identicos.
   Resultado: perfil A/B/C/D + dose + calendario dos primeiros 10 dias (datas a partir de hoje) + 3 dicas.
-  localStorage: so pra reabrir no resultado; tudo em try/catch; sem ele funciona igual.
+  localStorage: so pra reabrir no resultado ('analisi-v2') e pra contar no progresso da home ('analisi_fatta'=1); tudo em try/catch.
   Regras de perfil (mesmas do PDF, pag. 5): D = 65+ ou diagnosi "Si, uno o piu" · C = 45-64 · B = ate 44 com >=1 fattore
   (fumo tutti i giorni/in compagnia, alcol regolarmente, sonno < 5 ore, sedentario) · A = ate 44 senza fattori.
+  VERSAO DO CACHE: o token 20260925 do ../app.css?v= acompanha o sw.js (LEIA-ME, secao 5).
 -->
 <html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F1EA">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#083D42">
 <title>La tua Analisi Personalizzata</title>
 <meta name="description" content="Sei domande, un minuto: il tuo profilo, la tua dose e il calendario dei primi 10 giorni.">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<style>
-  :root{
-    --bg:#F5F1EA; --ink:#1B2530; --teal:#0E5A60; --teal-dark:#0A464B; --ocre:#B9802A; --ocre-dark:#8E6220;
-    --gray-strong:#59626E; --line:#E2DCD1; --card:#FFFFFF; --soft:#E4F0EC;
-  }
-  *,*::before,*::after{box-sizing:border-box}
-  [hidden]{display:none !important}
-  /* base 125%: 1rem = 20px (cresce junto se il telefono usa il carattere grande) */
-  html{font-size:125%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-  body{
-    margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
-    font-size:1rem;line-height:1.5;overflow-wrap:break-word;
-  }
-  .wrap{max-width:720px;margin:0 auto;padding:0 20px}
-  @supports (padding:max(0px)){
-    .wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
-  }
-  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:700;margin:0}
-  h1{font-size:1.65rem;line-height:1.2;margin-bottom:.8rem}
-  h2{font-size:1.4rem;line-height:1.25;margin-bottom:1rem}
-  h3{font-size:1.15rem;line-height:1.25;margin-bottom:.6rem}
-  p{margin:0 0 .8rem}
-  strong{font-weight:700}
-  a{color:var(--teal)}
-
-  .site-head{border-bottom:1px solid var(--line);padding:14px 0}
-  .brand{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1rem;color:var(--ink)}
-
-  .screen{padding:1.4rem 0 2rem}
-  .lead{font-size:1.05rem}
-
-  /* progresso */
-  .progress{margin:0 0 .5rem;font-size:.95rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal)}
-  .bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:0 0 1.2rem}
-  .bar i{display:block;height:100%;width:0;background:var(--teal)}
-
-  /* botoes: >= 64px de altura, texto >= 20px, largura da coluna */
-  .btn{
-    display:flex;align-items:center;justify-content:center;text-align:center;
-    width:100%;min-height:3.2rem;padding:.7rem 1rem;margin:0;
-    background:var(--teal);color:#FFFFFF;text-decoration:none;
-    font-family:inherit;font-size:1.05rem;font-weight:700;line-height:1.25;
-    border:0;border-bottom:4px solid var(--teal-dark);border-radius:14px;cursor:pointer;
-    touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none;
-  }
-  .btn:hover{background:var(--teal-dark)}
-  .btn:active{background:var(--teal-dark);transform:translateY(2px)}
-  .btn + .btn{margin-top:.9rem}
-  .btn:focus{outline:4px solid var(--ink);outline-offset:3px}
-  .btn:focus:not(:focus-visible){outline:none}
-  .btn:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
-  .btn-ocre{background:var(--ocre);border-bottom-color:var(--ocre-dark)}
-  .btn-ocre:hover,.btn-ocre:active{background:var(--ocre-dark)}
-  /* opcoes de resposta: fundo branco, borda petroleo, texto a esquerda */
-  .opt{
-    background:var(--card);color:var(--ink);justify-content:flex-start;text-align:left;
-    border:3px solid var(--teal);border-bottom-width:5px;font-weight:600;
-  }
-  .opt:hover{background:var(--soft)}
-  .opt:active{background:var(--soft);transform:translateY(2px)}
-  .opt + .opt{margin-top:.8rem}
-  .link{
-    display:inline-flex;align-items:center;min-height:3rem;padding:.6rem 0;margin:.6rem 0 0;
-    background:none;border:0;color:var(--teal);font-family:inherit;font-size:1rem;font-weight:700;
-    text-decoration:underline;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-  }
-  .link:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
-
-  /* cartoes do resultado */
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2rem 16px;margin:0 0 1rem}
-  .card.top-teal{border-top:5px solid var(--teal)}
-  .card.top-ocre{border-top:5px solid var(--ocre)}
-  .card p:last-child{margin-bottom:0}
-  .kicker{margin:0 0 .3rem;font-size:.95rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal)}
-  .profile{font-family:Georgia,"Times New Roman",serif;font-size:2rem;line-height:1.1;margin:0 0 .6rem}
-  .profile span{color:var(--teal)}
-  .card.top-ocre .profile span{color:var(--ocre)}
-
-  table{width:100%;border-collapse:collapse;font-size:1rem}
-  td{padding:.55rem 0;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.35}
-  tr:last-child td{border-bottom:0}
-  td:first-child{color:var(--gray-strong);padding-right:.8rem;width:50%}
-  td:last-child{font-weight:700;text-align:right}
-  td small{display:block;font-size:.9rem;font-weight:400;color:var(--gray-strong)}
-
-  .cal{list-style:none;margin:0;padding:0}
-  .cal li{display:flex;align-items:center;gap:.6rem;padding:.5rem .4rem;border-bottom:1px solid var(--line);border-radius:8px}
-  .cal li:last-child{border-bottom:0}
-  .cal li.on{background:var(--soft)}
-  .cal .txt{flex:1 1 auto;min-width:0}
-  .cal .n{display:block;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:1.05rem;line-height:1.25}
-  .cal .d{display:block;line-height:1.3}
-  .cal .tag{flex:0 0 auto;font-size:.9rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:.2rem .6rem;border-radius:999px;border:2px solid var(--line);color:var(--gray-strong);white-space:nowrap}
-  .cal li.on .tag{background:var(--teal);border-color:var(--teal);color:#FFFFFF}
-
-  ol.tips{margin:0;padding:0;list-style:none;counter-reset:t}
-  ol.tips li{position:relative;counter-increment:t;padding:0 0 0 2.6rem;margin:0 0 .9rem;min-height:2rem}
-  ol.tips li:last-child{margin-bottom:0}
-  ol.tips li::before{
-    content:counter(t);position:absolute;left:0;top:0;width:2rem;height:2rem;
-    display:flex;align-items:center;justify-content:center;
-    border:3px solid var(--ocre);border-radius:50%;background:var(--card);
-    font-weight:700;font-size:1.05rem;line-height:1;color:var(--ink);
-  }
-  .note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ocre);border-radius:14px;padding:.8rem .9rem;margin:0 0 1rem;font-size:.95rem}
-  .note p:last-child{margin-bottom:0}
-  .notice{background:var(--ink);color:#FFFFFF;border-radius:18px;padding:1.1rem 1.1rem;margin:0 0 1rem}
-  .notice p:last-child{margin-bottom:0}
-  .notice strong{color:#FFFFFF}
-
-  footer{padding:.4rem 0 1.6rem;border-top:1px solid var(--line);margin-top:1rem}
-  .legal{font-size:.9rem;line-height:1.6;color:var(--gray-strong)}
-  .legal p{margin:.8rem 0 .4rem}
-  /* alvo de toque >= 60px tambem nos links do rodape */
-  .legal a{display:inline-flex;align-items:center;min-height:3rem;padding:.4rem 0;overflow-wrap:anywhere;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-
-  @media (min-width:700px){
-    body{font-size:1.05rem}
-    h1{font-size:2.1rem}
-    h2{font-size:1.6rem}
-    .card{padding:1.6rem 1.8rem}
-  }
-  @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
-  }
-</style>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Programma">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
+<link rel="stylesheet" href="../app.css?v=20260925">
 </head>
 <body>
 
-<header class="site-head">
-  <div class="wrap">
-    <p class="brand">Il Trucco del Bicarbonato</p>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="31" fill="#0E5A60" stroke="#E2B15C" stroke-width="2"/>
+      <path d="M32 13c-7.5 9.6-13 16.6-13 23.6a13 13 0 0 0 26 0c0-7-5.5-14-13-23.6z" fill="#F5F1EA"/>
+      <circle cx="27.6" cy="38.5" r="2.5" fill="#B9802A"/>
+      <circle cx="34.6" cy="43.2" r="1.8" fill="#B9802A"/>
+      <circle cx="36" cy="33.5" r="1.5" fill="#B9802A"/>
+    </svg>
+    <p class="wordmark">Il Trucco del Bicarbonato</p>
+    <p class="wordmark-lab">BNTS Lab</p>
   </div>
 </header>
 
@@ -158,10 +49,13 @@
   <!-- 0. Intro -->
   <section id="intro" class="screen" aria-labelledby="titolo">
     <div class="wrap">
-      <h1 id="titolo">La tua Analisi Personalizzata</h1>
-      <p class="lead">Sei domande, le stesse del test. Un minuto. Alla fine trovi il tuo profilo, la tua dose e il calendario dei primi 10 giorni.</p>
-      <p>Non viene inviato niente: il calcolo resta sul tuo telefono.</p>
-      <button type="button" class="btn" id="start">Inizia l’analisi</button>
+      <div class="card intro-card">
+        <span class="intro-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m8.5 13 2.5 2.5 4.5-5"/></svg></span>
+        <h1 id="titolo">La tua Analisi Personalizzata</h1>
+        <p class="lead">Sei domande, le stesse del test. Un minuto. Alla fine trovi il tuo profilo, la tua dose e il calendario dei primi 10 giorni.</p>
+        <p class="muted">Non viene inviato niente: il calcolo resta sul tuo telefono.</p>
+        <button type="button" class="btn btn-gold btn-lg" id="start">Inizia l’analisi</button>
+      </div>
     </div>
   </section>
 
@@ -170,21 +64,23 @@
     <div class="wrap">
       <p class="progress">Domanda <span id="qn">1</span> di 6</p>
       <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
-      <h2 id="qtitle"></h2>
-      <div id="opts" role="group" aria-labelledby="qtitle"></div>
+      <div class="card q-card">
+        <h2 id="qtitle" tabindex="-1"></h2>
+        <div id="opts" role="group" aria-labelledby="qtitle"></div>
+      </div>
       <button type="button" class="link" id="back" hidden>&#8592; Torna alla domanda precedente</button>
     </div>
   </section>
 
   <!-- 7. Risultato -->
-  <section id="result" class="screen" aria-labelledby="rtitle" hidden>
+  <section id="result" class="screen result" aria-labelledby="rtitle" hidden>
     <div class="wrap">
       <h1 id="rtitle">Ecco la tua analisi</h1>
 
       <div class="card top-teal" id="profcard">
         <p class="kicker">Il tuo profilo</p>
-        <p class="profile"><span id="pletter"></span> &middot; <span id="pname"></span></p>
-        <p id="pwhy"></p>
+        <p class="profile"><span class="profile-letter" id="pletter"></span><span class="profile-name" id="pname"></span></p>
+        <p class="profile-why" id="pwhy"></p>
       </div>
 
       <div class="card">
@@ -221,23 +117,45 @@
 
       <p>La ricetta passo dopo passo, i 7 errori da evitare e la pagina «Chi deve parlare col medico prima» li trovi nel PDF <strong>Il Protocollo del Bicarbonato</strong>, nell’area membri.</p>
 
-      <button type="button" class="btn btn-ocre" id="redo">Rifai l’analisi</button>
+      <div class="result-actions">
+        <a class="btn btn-gold btn-lg" href="../index.html" id="torna">Torna al programma</a>
+        <button type="button" class="btn btn-ocre" id="redo">Rifai l’analisi</button>
+      </div>
     </div>
   </section>
 
 </main>
 
-<footer>
+<footer class="analisi-footer">
   <div class="wrap legal">
     <p>Hai una domanda? Scrivici: <a href="mailto:support@bntslab.online">support@bntslab.online</a> oppure su WhatsApp al <a href="https://wa.me/595985256963" rel="noopener">+595 985 256963</a>. Ti risponde una persona, in italiano.</p>
   </div>
 </footer>
 
+<!-- Barra de abas fixa (a mesma do programma; aqui "Analisi" e a aba ativa) -->
+<nav class="tabbar" aria-label="Navigazione principale">
+  <div class="tabbar-in">
+    <a class="tab" href="../index.html" data-tab="programma">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span class="tab-label">Programma</span>
+    </a>
+    <a class="tab is-active" href="#intro" data-tab="analisi" aria-current="page">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m8.5 13 2.5 2.5 4.5-5"/></svg>
+      <span class="tab-label">Analisi</span>
+    </a>
+    <a class="tab" href="../index.html#aiuto" data-tab="aiuto">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg>
+      <span class="tab-label">Aiuto</span>
+    </a>
+  </div>
+</nav>
+
 <script>
-/* Tutto in un'unica funzione. Nessuna richiesta di rete. localStorage solo per riaprire sul risultato: in try/catch, opzionale. */
+/* Tutto in un'unica funzione. Nessuna richiesta di rete. localStorage solo per riaprire sul risultato e per il progresso della home: in try/catch, opzionale. */
 (function () {
   'use strict';
   var KEY = 'analisi-v2';
+  var KEY_FATTA = 'analisi_fatta'; /* letto da ../index.html (hero "X di 8 completati") */
 
   /* Le 6 domande: testo e opzioni IDENTICI al quiz (s1, s2, s4, s11, s12, s14), nello stesso ordine. */
   var Q = [
@@ -300,7 +218,10 @@
       return o.a;
     } catch (e) { return null; }
   }
-  function save(a) { try { window.localStorage.setItem(KEY, JSON.stringify({ a: a, t: Date.now() })); } catch (e) {} }
+  function save(a) {
+    try { window.localStorage.setItem(KEY, JSON.stringify({ a: a, t: Date.now() })); } catch (e) {}
+    try { window.localStorage.setItem(KEY_FATTA, '1'); } catch (e) {}
+  }
   function clear() { try { window.localStorage.removeItem(KEY); } catch (e) {} }
 
   var $ = function (id) { return document.getElementById(id); };
@@ -383,6 +304,14 @@
   /* riapre sul risultato se c'è un'analisi salvata; altrimenti intro */
   var saved = load();
   if (saved) { answers = saved; renderResult(saved); } else { show(intro); }
+
+  /* barra de abas: altura real -> --tabbar-real (mesma mecanica do index.html; o rodape nunca fica atras dela) */
+  var bar = document.querySelector('.tabbar');
+  function setBarH() {
+    if (!bar) { return; }
+    try { document.documentElement.style.setProperty('--tabbar-real', bar.offsetHeight + 'px'); document.body.className += (document.body.className ? ' ' : '') + 'js-bar'; } catch (e) {}
+  }
+  try { if (window.ResizeObserver) { new ResizeObserver(setBarH).observe(bar); } else { setBarH(); window.addEventListener('resize', setBarH); } } catch (e) {}
 })();
 </script>
 

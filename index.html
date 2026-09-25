@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--
-  AREA MEMBRI v2 "Il tuo programma": 2 lezioni (video) + Protocollo (PDF) + Analisi (pagina) + 3 bonus + super bonus + aiuto.
-  Arquivo unico, CSS inline, 1 script inline pequeno no fim, zero dependencia externa, zero pixel. Base = entrega\index.html (v1).
+  AREA MEMBRI v3 "Il tuo programma" (app shell): barra do topo fixa + hero de progresso + 9 secoes + barra de abas + PWA.
+  Conteudo e mecanica = v2 (2 lezioni em video, Protocollo PDF, Analisi, 3 bonus, super bonus, aiuto). Base: entrega\index.html (v1).
+  CSS em app.css (design system, ver DESIGN.md). JS vanilla inline no fim. Zero dependencia externa, zero pixel.
 
   CAPA DE TOQUE: cada player tem um <button class="cover"> por cima ("Tocca qui per guardare la Lezione N" / "...il video").
   No HTML ela vem hidden e o <video> vem com controls: SEM JavaScript a pagina e o player nativo normal.
@@ -9,10 +10,15 @@
   nos atributos data-label-play / data-label-replay de cada botao (3 cartoes: data-video="1" Lezione 1, "2" Lezione 2, "3" Bonus 3).
   Os <video> NAO tem playsinline de proposito: no iPhone o Safari abre a tela cheia sozinho ao dar play.
 
+  PROGRESSO (hero "X di 8 completati"): videos terminados (localStorage programma-visti-v2), PDFs abertos e videos iniciados
+  (programma-stato-v3), Analisi feita (analisi_fatta=1, gravado por analisi/index.html). Tudo em try/catch: sem storage mostra 0.
+
   ARQUIVOS (caminho RELATIVO, nunca URL absoluta):
-    videos/lezione-1.mp4 e videos/lezione-2.mp4   AINDA NAO EXISTEM (HeyGen, fase 3 do 00-PRODOTTO-v2.md). Ver LEIA-ME.
-    videos/la-fonte-della-virilita.mp4            copia do bonus-3-fonte\video-la-fonte-della-virilita.mp4 (faststart ja ok).
-    pdf/*.pdf (5)  analisi/index.html  img/lezione-1.jpg, lezione-2.jpg, bonus-3.jpg (capas: node _tool\gera-capas.mjs)
+    app.css?v=20260925   manifest.webmanifest   sw.js   fonts/*.woff2
+    videos/lezione-1.mp4, lezione-2.mp4, la-fonte-della-virilita.mp4   pdf/*.pdf (5)   analisi/index.html
+    img/poster-*.jpg (frames reais dos videos)  img/pdf-protocollo.jpg  img/icon-*.png  (node _tool\gera-capas.mjs)
+
+  VERSAO DO CACHE: o token 20260925 aparece aqui (app.css?v=) e em sw.js (CACHE). Toda republicacao troca os dois (LEIA-ME, secao 5).
 
   PLACEHOLDERS PRA TROCAR ANTES DE SUBIR (buscar por "{{" no editor; nao pode sobrar nenhum):
     {{RAGIONE_SOCIALE}}       nome legal do vendedor (rodape).
@@ -29,232 +35,104 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F1EA">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#083D42">
 <title>Il tuo programma</title>
 <meta name="description" content="Il tuo programma: le lezioni, i documenti e i bonus.">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<style>
-  :root{
-    --bg:#F5F1EA; --ink:#1B2530; --teal:#0E5A60; --teal-dark:#0A464B; --ocre:#B9802A;
-    --gray-strong:#59626E; --line:#E2DCD1; --card:#FFFFFF;
-    --wa:#17703F; --wa-dark:#0F5A31; --seen-bg:#E4F0EC;
-  }
-  *,*::before,*::after{box-sizing:border-box}
-  [hidden]{display:none !important}
-  /* base 125%: 1rem = 20px (e cresce junto se o aparelho usa fonte maior) */
-  html{font-size:125%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-  body{
-    margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
-    font-size:1rem;line-height:1.6;overflow-wrap:break-word;
-    padding-bottom:5.6rem; /* espaco da barra fixa "Aiuto": ela nunca cobre conteudo */
-    padding-bottom:calc(5.6rem + env(safe-area-inset-bottom));
-  }
-  .wrap{max-width:720px;margin:0 auto;padding:0 20px}
-  /* viewport-fit=cover: no iPhone deitado o conteudo nao entra debaixo do recorte da camera */
-  @supports (padding:max(0px)){
-    .wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
-  }
-  h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:700}
-  h1{font-size:1.65rem;line-height:1.2;margin:0 0 .2rem;letter-spacing:-.2px}
-  h2{font-size:1.35rem;line-height:1.25;margin:0 0 .8rem}
-  p{margin:0 0 .8rem}
-  a{color:var(--teal)}
-  strong{font-weight:700}
-
-  a:focus,video:focus{outline:4px solid var(--ink);outline-offset:3px}
-  a:focus:not(:focus-visible),video:focus:not(:focus-visible){outline:none}
-  a:focus-visible,video:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
-
-  /* cabecalho: nome do programa grande + "BNTS Lab" pequeno (sigla do extrato) */
-  .site-head{border-bottom:1px solid var(--line);padding:14px 0 12px}
-  .brand{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1rem;line-height:1.4;color:var(--gray-strong)}
-
-  section{padding:1.6rem 0}
-  .hero{padding:1.2rem 0 .2rem}
-  .hero p{margin-bottom:0;font-size:1.05rem}
-
-  /* padding lateral em px de proposito: com fonte do sistema aumentada ele nao cresce e sobra largura pro texto */
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2rem 16px}
-  .card + .card{margin-top:1.2rem}
-  .card.top-teal{border-top:5px solid var(--teal)}
-  .card.top-ocre{border-top:5px solid var(--ocre)}
-
-  /* caixa de instrucoes (fica logo depois da Lezione 1) */
-  .how{margin-top:1.2rem}
-  ol.steps{list-style:none;margin:0;padding:0;counter-reset:passo}
-  ol.steps li{position:relative;counter-increment:passo;padding:0 0 0 2.6rem;margin:0 0 1rem;min-height:2rem}
-  ol.steps li:last-child{margin-bottom:0}
-  ol.steps li::before{
-    content:counter(passo);position:absolute;left:0;top:0;width:2rem;height:2rem;
-    display:flex;align-items:center;justify-content:center;
-    border:3px solid var(--ocre);border-radius:50%;background:var(--card);
-    font-weight:700;font-size:1.1rem;line-height:1;color:var(--ink);
-  }
-
-  /* cartoes numerados (1 a 9): numero num circulo + titulo */
-  .card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem .8rem;margin:0 0 .5rem}
-  .num{
-    margin:0;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
-    width:2.2rem;height:2.2rem;border:3px solid var(--ocre);border-radius:50%;background:var(--card);
-    font-size:1.15rem;line-height:1;font-weight:700;color:var(--ink);
-  }
-  .seen{
-    margin:0;display:inline-flex;align-items:center;padding:.2rem .7rem;
-    font-size:1rem;line-height:1.3;font-weight:700;color:var(--teal-dark);
-    background:var(--seen-bg);border:2px solid var(--teal);border-radius:999px;white-space:nowrap;
-  }
-  .card h2{margin:0 0 .3rem}
-  .sub{margin:0 0 .8rem;color:var(--gray-strong)}
-  .dur{margin:0 0 .8rem;color:var(--gray-strong)}
-  .card .btn{margin-top:.4rem}
-  .card .btn + .btn{margin-top:1rem}
-
-  /* cartoes de video */
-  .video-card{border-top:5px solid var(--teal)}
-  .video-box{margin:.8rem auto 0}
-  .video{
-    position:relative;width:100%;padding-top:56.25%;
-    background:var(--ink);border:1px solid var(--line);border-radius:12px;overflow:hidden;
-  }
-  .video video{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:var(--ink)}
-  .video-box + .btn{margin-top:1rem}
-
-  /* capa de toque: cobre o player inteiro. Vem hidden no HTML; quem mostra e o script (sem JS = player nativo) */
-  .cover{
-    position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    margin:0;padding:8px 12px;border:0;border-radius:0;cursor:pointer;
-    background:var(--teal);color:#FFFFFF;text-align:center;
-    font-family:inherit;font-size:1rem;font-weight:700;line-height:1.2;
-    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-    -webkit-appearance:none;appearance:none;
-  }
-  .cover:hover,.cover:active{background:var(--teal-dark)}
-  .cover-icon{flex:0 0 auto;display:block;width:72px;height:72px;width:clamp(72px,22vw,112px);height:clamp(72px,22vw,112px);margin:0 0 8px}
-  .cover:active .cover-icon{opacity:.8}
-  .cover-text{display:block;max-width:24em}
-  .cover:focus{outline:4px solid #FFFFFF;outline-offset:-8px}
-  .cover:focus:not(:focus-visible){outline:none}
-  .cover:focus-visible{outline:4px solid #FFFFFF;outline-offset:-8px}
-  /* tela muito estreita: icone ao lado do texto, senao o texto de 20px nao cabe na altura do player */
-  @media (max-width:349px){
-    .cover{flex-direction:row;text-align:left;padding:6px 8px}
-    .cover-icon{margin:0 10px 0 0}
-  }
-  /* navegador atual: a caixa cresce se o texto da capa precisar de mais altura que 16:9 (fonte do sistema aumentada),
-     em vez de cortar. Navegador antigo fica na caixa 16:9 fixa de cima. */
-  @supports (aspect-ratio:16/9){
-    .video{padding-top:0;display:grid}
-    .video video{position:static;grid-area:1/1;align-self:center;height:auto;aspect-ratio:16/9}
-    .cover{position:static;grid-area:1/1;height:auto;align-self:stretch}
-  }
-  .next-hint{margin:1rem 0 0;padding:0 .2rem;text-align:center}
-
-  /* botoes */
-  .btn{
-    display:flex;align-items:center;justify-content:center;text-align:center;
-    width:100%;min-height:3.2rem;padding:.7rem 1rem;margin:0;
-    background:var(--teal);color:#FFFFFF;text-decoration:none;
-    font-size:1.05rem;font-weight:700;line-height:1.25;
-    border:0;border-bottom:4px solid var(--teal-dark);border-radius:14px;
-    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-  }
-  .btn:hover{background:var(--teal-dark)}
-  /* feedback de toque: o botao escurece e "afunda" 2px (instantaneo, sem animacao) */
-  .btn:active{background:var(--teal-dark);transform:translateY(2px)}
-  .btn + .btn{margin-top:1rem}
-  .btn svg{flex:0 0 auto;width:1.5rem;height:1.5rem;margin-right:.6rem}
-  .btn-wa{background:var(--wa);border-bottom-color:var(--wa-dark)}
-  .btn-wa:hover,.btn-wa:active{background:var(--wa-dark)}
-
-  .contact-plain{margin:1.2rem 0 0;padding:.8rem 14px;background:var(--bg);border:1px solid var(--line);border-radius:14px}
-  .contact-plain p{margin:0 0 .4rem}
-  .contact-plain p:last-child{margin-bottom:0}
-  .contact-plain strong{overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
-  .estratto{margin:1.2rem 0 0}
-  .garanzia{margin:.8rem 0 0}
-
-  /* barra fixa de ajuda */
-  .helpbar{
-    position:fixed;left:0;right:0;bottom:0;z-index:10;
-    background:var(--bg);border-top:1px solid var(--line);
-    padding:.4rem 0;padding-bottom:calc(.4rem + env(safe-area-inset-bottom));
-  }
-  .helpbar .btn{
-    min-height:3rem;padding:.4rem 1rem;
-    background:var(--card);color:var(--teal);border:3px solid var(--teal);
-  }
-  .helpbar .btn:hover,.helpbar .btn:active{background:var(--seen-bg)}
-
-  /* rodape */
-  footer{padding:.4rem 0 1rem}
-  .legal{font-size:.85rem;line-height:1.6;color:var(--gray-strong);margin-top:1.2rem;border-top:1px solid var(--line);padding-top:1rem}
-  .legal p{margin:0 0 .5rem}
-  .legal a{color:var(--teal);display:inline-block;padding:.6rem 0;overflow-wrap:anywhere;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  .legal a:active{color:var(--ink)}
-  .links{margin:0}
-  .links a{display:block;padding:.6rem 0;margin-top:1rem}
-
-  @media (min-width:700px){
-    body{font-size:1.05rem}
-    h1{font-size:2.2rem}
-    h2{font-size:1.55rem}
-    section{padding:2rem 0}
-    .hero{padding:1.6rem 0 .4rem}
-    .card{padding:1.7rem 1.8rem}
-    .cover{font-size:1.25rem}
-    .cover-icon{margin-bottom:14px}
-  }
-
-  /* celular deitado: some a barra (nao come o video) e o video cabe inteiro na tela */
-  @media (orientation:landscape) and (max-height:499px){
-    body{padding-bottom:0}
-    .helpbar{display:none}
-    .video-box{max-width:calc(100vh * 16 / 9 - 12px)}
-  }
-
-  @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
-  }
-  @media print{
-    body{padding-bottom:0}
-    .helpbar{display:none}
-  }
-</style>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Programma">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icon-192.png">
+<link rel="preload" href="fonts/manrope-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/fraunces-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="app.css?v=20260925">
 </head>
 <body>
 
-<header class="site-head">
-  <div class="wrap">
-    <h1 id="titolo">Il Trucco del Bicarbonato</h1>
-    <p class="brand">BNTS Lab</p>
+<!-- Barra do topo: logo (SVG proprio) + nome + "BNTS Lab" -->
+<header class="topbar" id="inizio">
+  <div class="wrap topbar-in">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="31" fill="#0E5A60" stroke="#E2B15C" stroke-width="2"/>
+      <path d="M32 13c-7.5 9.6-13 16.6-13 23.6a13 13 0 0 0 26 0c0-7-5.5-14-13-23.6z" fill="#F5F1EA"/>
+      <circle cx="27.6" cy="38.5" r="2.5" fill="#B9802A"/>
+      <circle cx="34.6" cy="43.2" r="1.8" fill="#B9802A"/>
+      <circle cx="36" cy="33.5" r="1.5" fill="#B9802A"/>
+    </svg>
+    <p class="wordmark">Il Trucco del Bicarbonato</p>
+    <p class="wordmark-lab">BNTS Lab</p>
   </div>
 </header>
 
 <main>
 
-  <!-- Topo: uma linha so -->
-  <section class="hero" aria-labelledby="titolo">
+  <!-- Hero: percorso + progresso + Continua -->
+  <section class="hero" aria-labelledby="hero-titolo">
     <div class="wrap">
-      <p>Ecco tutto quello che hai ricevuto oggi. Comincia dalla Lezione 1.</p>
+      <h1 id="hero-titolo">Il tuo percorso</h1>
+      <p class="hero-lead">Ecco tutto quello che hai ricevuto oggi. Comincia dalla Lezione 1.</p>
+      <div class="progress-card">
+        <div class="ring" role="img" aria-label="0 su 8 completati" data-ring>
+          <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+            <circle class="ring-bg" cx="60" cy="60" r="52"/>
+            <circle class="ring-fg" cx="60" cy="60" r="52" data-ring-fg/>
+          </svg>
+          <p class="ring-num" aria-hidden="true"><span data-ring-n>0</span><span class="ring-den">/8</span></p>
+        </div>
+        <div class="progress-text">
+          <p class="progress-count"><strong data-count>0</strong> su 8 completati</p>
+          <p class="progress-next"><span data-next-label>Prossimo:</span> <span data-next>Lezione 1 — La ricetta in 2 minuti</span></p>
+        </div>
+      </div>
+      <a class="btn btn-gold btn-lg" href="#s1" data-continua>
+        Continua
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      </a>
     </div>
   </section>
 
-  <section aria-label="Il tuo programma">
+  <!-- Aggiungi alla schermata Home: so aparece fora do modo app (standalone) e ate o toque em "Ho capito".
+       <details> fechado = 1 linha; o toque abre as instrucoes (funciona sem JS, mas sem JS a secao nem aparece) -->
+  <section class="install" data-install hidden aria-labelledby="install-titolo">
+    <div class="wrap">
+      <details class="card install-card">
+        <summary class="install-summary">
+          <span class="install-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 9v6M9 12h6"/></svg></span>
+          <span class="install-title" id="install-titolo">Aggiungi alla schermata Home</span>
+          <svg class="ico install-chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="install-body">
+          <p class="install-sub">Così lo apri come un’app, con un tocco.</p>
+          <p class="install-how" data-install-ios>Su iPhone: tocca <strong>Condividi</strong> <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg>, poi «Aggiungi alla schermata Home».</p>
+          <p class="install-how" data-install-android>Su Android: tocca i tre puntini <strong>&#8942;</strong> in alto a destra, poi «Installa app» o «Aggiungi a schermata Home».</p>
+          <button type="button" class="btn btn-secondary" data-install-ok>Ho capito</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="programma" aria-label="Il tuo programma">
     <div class="wrap">
 
-      <!-- 1. Lezione 1 (tem que aparecer na primeira tela do celular: a caixa de instrucoes vem DEPOIS dela) -->
-      <article class="card video-card" data-video="1" aria-labelledby="v1-titolo">
+      <p class="group-label">Lezioni</p>
+
+      <!-- 1. Lezione 1 -->
+      <article class="card item video-card" id="s1" data-item="lezione-1" data-tipo="video" data-video="1" aria-labelledby="v1-titolo">
         <div class="card-head">
           <p class="num" aria-hidden="true">1</p>
+          <span class="item-icon" aria-hidden="true"><svg class="ico-fill" viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7z"/></svg></span>
+          <p class="chip" data-stato>Da iniziare</p>
           <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
         </div>
         <h2 id="v1-titolo">Lezione 1 — La ricetta in 2 minuti</h2>
-        <p class="dur">Circa 3 minuti e mezzo</p>
+        <p class="dur"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Circa 3 minuti e mezzo</p>
         <div class="video-box"><div class="video">
-          <video controls preload="none" poster="img/lezione-1.jpg" aria-labelledby="v1-titolo">
+          <video controls preload="none" poster="img/poster-lezione-1.jpg" aria-labelledby="v1-titolo">
             <source src="videos/lezione-1.mp4" type="video/mp4">
             Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
           </video>
@@ -262,6 +140,9 @@
                   data-label-play="Tocca qui per guardare la Lezione 1"
                   data-label-replay="Hai visto la Lezione 1. Tocca qui per rivederla."
                   aria-label="Tocca qui per guardare la Lezione 1">
+            <img class="cover-img" src="img/poster-lezione-1.jpg" alt="" aria-hidden="true" decoding="async">
+            <span class="cover-scrim" aria-hidden="true"></span>
+            <span class="cover-dur" aria-hidden="true">3:32</span>
             <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
             <span class="cover-text" data-cover-text>Tocca qui per guardare la Lezione 1</span>
           </button>
@@ -269,7 +150,7 @@
       </article>
 
       <!-- Instrucoes: logo depois da Lezione 1 -->
-      <div class="card top-ocre how" role="group" aria-labelledby="come">
+      <div class="card how" role="group" aria-labelledby="come">
         <h2 id="come">Se non sai come far partire il video</h2>
         <ol class="steps">
           <li>Tocca il pulsante grande con il triangolo&nbsp;&#9654;&#xFE0E; e la scritta «Tocca qui per guardare».</li>
@@ -281,15 +162,17 @@
       <p class="next-hint">Quando hai finito, scendi: sotto c’è la Lezione 2.</p>
 
       <!-- 2. Lezione 2 -->
-      <article class="card video-card" data-video="2" aria-labelledby="v2-titolo">
+      <article class="card item video-card" id="s2" data-item="lezione-2" data-tipo="video" data-video="2" aria-labelledby="v2-titolo">
         <div class="card-head">
           <p class="num" aria-hidden="true">2</p>
+          <span class="item-icon" aria-hidden="true"><svg class="ico-fill" viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7z"/></svg></span>
+          <p class="chip" data-stato>Da iniziare</p>
           <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
         </div>
         <h2 id="v2-titolo">Lezione 2 — La tua dose e il calendario</h2>
-        <p class="dur">Circa 3 minuti</p>
+        <p class="dur"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Circa 3 minuti</p>
         <div class="video-box"><div class="video">
-          <video controls preload="none" poster="img/lezione-2.jpg" aria-labelledby="v2-titolo">
+          <video controls preload="none" poster="img/poster-lezione-2.jpg" aria-labelledby="v2-titolo">
             <source src="videos/lezione-2.mp4" type="video/mp4">
             Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
           </video>
@@ -297,98 +180,150 @@
                   data-label-play="Tocca qui per guardare la Lezione 2"
                   data-label-replay="Hai visto la Lezione 2. Tocca qui per rivederla."
                   aria-label="Tocca qui per guardare la Lezione 2">
+            <img class="cover-img" src="img/poster-lezione-2.jpg" alt="" aria-hidden="true" decoding="async">
+            <span class="cover-scrim" aria-hidden="true"></span>
+            <span class="cover-dur" aria-hidden="true">2:57</span>
             <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
             <span class="cover-text" data-cover-text>Tocca qui per guardare la Lezione 2</span>
           </button>
         </div></div>
       </article>
 
+      <p class="group-label">Protocollo e Analisi</p>
+
       <!-- 3. Il Protocollo (PDF) -->
-      <article class="card top-teal" aria-labelledby="s3-titolo">
-        <div class="card-head"><p class="num" aria-hidden="true">3</p></div>
-        <h2 id="s3-titolo">Il Protocollo del Bicarbonato</h2>
-        <p class="sub">La ricetta completa, la tua dose, il calendario.</p>
-        <a class="btn" href="pdf/il-protocollo-del-bicarbonato.pdf" target="_blank" rel="noopener">Apri il Protocollo (PDF, 11&nbsp;pagine)</a>
+      <article class="card item" id="s3" data-item="protocollo" data-tipo="pdf" aria-labelledby="s3-titolo">
+        <div class="card-head">
+          <p class="num" aria-hidden="true">3</p>
+          <span class="item-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M9.5 13h5M9.5 17h5"/></svg></span>
+          <p class="chip" data-stato>Da iniziare</p>
+        </div>
+        <div class="pdf-row">
+          <span class="pdf-thumb" aria-hidden="true"><img src="img/pdf-protocollo.jpg" alt="" width="360" height="509" decoding="async" loading="lazy"></span>
+          <div>
+            <h2 id="s3-titolo">Il Protocollo del Bicarbonato</h2>
+            <p class="sub">La ricetta completa, la tua dose, il calendario.</p>
+          </div>
+        </div>
+        <a class="btn" href="pdf/il-protocollo-del-bicarbonato.pdf" target="_blank" rel="noopener" data-pdf="protocollo">Apri il Protocollo (PDF, 11&nbsp;pagine)</a>
       </article>
 
       <!-- 4. Analisi (pagina, mesma aba: il tasto "indietro" del telefono riporta qui) -->
-      <article class="card top-ocre" aria-labelledby="s4-titolo">
-        <div class="card-head"><p class="num" aria-hidden="true">4</p></div>
+      <article class="card item card-analisi" id="s4" data-item="analisi" data-tipo="analisi" aria-labelledby="s4-titolo">
+        <div class="card-head">
+          <p class="num" aria-hidden="true">4</p>
+          <span class="item-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m8.5 13 2.5 2.5 4.5-5"/></svg></span>
+          <p class="chip" data-stato>Da iniziare</p>
+        </div>
         <h2 id="s4-titolo">La tua Analisi Personalizzata</h2>
         <p class="sub">6 domande, 1 minuto: scopri il tuo profilo e la tua dose.</p>
-        <a class="btn" href="analisi/index.html" data-analisi>Fai la tua Analisi</a>
+        <a class="btn btn-gold" href="analisi/index.html" data-analisi>Fai la tua Analisi</a>
       </article>
 
-      <!-- 5. Bonus 1 (PDF) -->
-      <article class="card top-teal" aria-labelledby="s5-titolo">
-        <div class="card-head"><p class="num" aria-hidden="true">5</p></div>
-        <h2 id="s5-titolo">Bonus 1 — Manuale Anti-Eiaculazione</h2>
-        <p class="sub">Decidi tu quando arrivare.</p>
-        <a class="btn" href="pdf/manuale-anti-eiaculazione.pdf" target="_blank" rel="noopener">Apri il Manuale (PDF, 9&nbsp;pagine)</a>
-      </article>
+      <p class="group-label">I tuoi bonus</p>
 
-      <!-- 6. Bonus 2 (PDF) -->
-      <article class="card top-teal" aria-labelledby="s6-titolo">
-        <div class="card-head"><p class="num" aria-hidden="true">6</p></div>
-        <h2 id="s6-titolo">Bonus 2 — La Formula del Toro</h2>
-        <p class="sub">La seconda ricetta: energia per più round.</p>
-        <a class="btn" href="pdf/la-formula-del-toro.pdf" target="_blank" rel="noopener">Apri la Formula del Toro (PDF, 7&nbsp;pagine)</a>
-      </article>
+      <div class="bonus-grid">
 
-      <!-- 7. Bonus 3 (video + PDF) -->
-      <article class="card video-card" data-video="3" aria-labelledby="v3-titolo">
-        <div class="card-head">
-          <p class="num" aria-hidden="true">7</p>
-          <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
-        </div>
-        <h2 id="v3-titolo">Bonus 3 — La Fonte della Virilità</h2>
-        <p class="sub">Le 7 abitudini che fanno la differenza. Un video e un PDF.</p>
-        <p class="dur">Video: circa 3 minuti</p>
-        <div class="video-box"><div class="video">
-          <video controls preload="none" poster="img/bonus-3.jpg" aria-labelledby="v3-titolo">
-            <source src="videos/la-fonte-della-virilita.mp4" type="video/mp4">
-            Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
-          </video>
-          <button type="button" class="cover" data-cover hidden
-                  data-label-play="Tocca qui per guardare il video"
-                  data-label-replay="Hai visto il video. Tocca qui per rivederlo."
-                  aria-label="Tocca qui per guardare il video">
-            <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
-            <span class="cover-text" data-cover-text>Tocca qui per guardare il video</span>
-          </button>
-        </div></div>
-        <a class="btn" href="pdf/la-fonte-della-virilita.pdf" target="_blank" rel="noopener">Apri La Fonte della Virilità (PDF, 9&nbsp;pagine)</a>
-      </article>
+        <!-- 5. Bonus 1 (PDF) -->
+        <article class="card item tile" id="s5" data-item="bonus-1" data-tipo="pdf" aria-labelledby="s5-titolo">
+          <div class="card-head">
+            <p class="num" aria-hidden="true">5</p>
+            <span class="item-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M9.5 13h5M9.5 17h5"/></svg></span>
+            <p class="chip" data-stato>Da iniziare</p>
+          </div>
+          <h2 id="s5-titolo">Bonus 1 — Manuale Anti-Eiaculazione</h2>
+          <p class="sub">Decidi tu quando arrivare.</p>
+          <a class="btn" href="pdf/manuale-anti-eiaculazione.pdf" target="_blank" rel="noopener" data-pdf="bonus-1">Apri il Manuale (PDF, 9&nbsp;pagine)</a>
+        </article>
 
-      <!-- 8. Super Bonus (PDF) -->
-      <article class="card top-ocre" aria-labelledby="s8-titolo">
-        <div class="card-head"><p class="num" aria-hidden="true">8</p></div>
-        <h2 id="s8-titolo">Super Bonus — Il Calendario dei 30 Giorni</h2>
-        <p class="sub">Giorno per giorno, cosa fare. Stampalo e attaccalo al frigo.</p>
-        <a class="btn" href="pdf/il-calendario-dei-30-giorni.pdf" target="_blank" rel="noopener">Apri il Calendario (PDF, 3&nbsp;pagine)</a>
-      </article>
+        <!-- 6. Bonus 2 (PDF) -->
+        <article class="card item tile" id="s6" data-item="bonus-2" data-tipo="pdf" aria-labelledby="s6-titolo">
+          <div class="card-head">
+            <p class="num" aria-hidden="true">6</p>
+            <span class="item-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M9.5 13h5M9.5 17h5"/></svg></span>
+            <p class="chip" data-stato>Da iniziare</p>
+          </div>
+          <h2 id="s6-titolo">Bonus 2 — La Formula del Toro</h2>
+          <p class="sub">La seconda ricetta: energia per più round.</p>
+          <a class="btn" href="pdf/la-formula-del-toro.pdf" target="_blank" rel="noopener" data-pdf="bonus-2">Apri la Formula del Toro (PDF, 7&nbsp;pagine)</a>
+        </article>
 
-      <!-- 9. Aiuto -->
-      <article class="card top-teal" id="aiuto" aria-labelledby="aiuto-titolo">
-        <div class="card-head"><p class="num" aria-hidden="true">9</p></div>
-        <h2 id="aiuto-titolo">Aiuto</h2>
-        <p class="sub">Scrivici. Ti risponde una persona, in italiano, entro 24 ore.</p>
-        <a class="btn btn-wa" href="https://wa.me/595985256963?text=Ho%20bisogno%20di%20aiuto%20con%20il%20programma" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#FFFFFF" d="M12 3C6.9 3 2.8 6.6 2.8 11c0 2.1.9 4 2.5 5.4L4.4 21l4.7-2.4c.9.3 1.9.4 2.9.4 5.1 0 9.2-3.6 9.2-8S17.1 3 12 3z"/></svg>
-          Scrivici su WhatsApp
+        <!-- 7. Bonus 3 (video + PDF) -->
+        <article class="card item video-card span-2" id="s7" data-item="bonus-3" data-tipo="video" data-video="3" data-pdf-key="bonus-3" aria-labelledby="v3-titolo">
+          <div class="card-head">
+            <p class="num" aria-hidden="true">7</p>
+            <span class="item-icon" aria-hidden="true"><svg class="ico-fill" viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7z"/></svg></span>
+            <p class="chip" data-stato>Da iniziare</p>
+            <p class="seen" data-seen hidden>&#10003;&#xFE0E; Già visto</p>
+          </div>
+          <h2 id="v3-titolo">Bonus 3 — La Fonte della Virilità</h2>
+          <p class="sub">Le 7 abitudini che fanno la differenza. Un video e un PDF.</p>
+          <p class="dur"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Video: circa 3 minuti</p>
+          <div class="video-box"><div class="video">
+            <video controls preload="none" poster="img/poster-bonus-3.jpg" aria-labelledby="v3-titolo">
+              <source src="videos/la-fonte-della-virilita.mp4" type="video/mp4">
+              Il video non si apre su questo telefono. Scrivici: trovi i contatti in fondo alla pagina.
+            </video>
+            <button type="button" class="cover" data-cover hidden
+                    data-label-play="Tocca qui per guardare il video"
+                    data-label-replay="Hai visto il video. Tocca qui per rivederlo."
+                    aria-label="Tocca qui per guardare il video">
+              <img class="cover-img" src="img/poster-bonus-3.jpg" alt="" aria-hidden="true" decoding="async">
+              <span class="cover-scrim" aria-hidden="true"></span>
+              <span class="cover-dur" aria-hidden="true">3:12</span>
+              <svg class="cover-icon" viewBox="0 0 72 72" aria-hidden="true" focusable="false"><circle cx="36" cy="36" r="36" fill="#FFFFFF"/><path fill="#0E5A60" d="M28 20v32l26-16z"/></svg>
+              <span class="cover-text" data-cover-text>Tocca qui per guardare il video</span>
+            </button>
+          </div></div>
+          <a class="btn" href="pdf/la-fonte-della-virilita.pdf" target="_blank" rel="noopener" data-pdf="bonus-3">Apri La Fonte della Virilità (PDF, 9&nbsp;pagine)</a>
+        </article>
+
+        <!-- 8. Super Bonus (PDF) -->
+        <article class="card item card-super span-2" id="s8" data-item="super-bonus" data-tipo="pdf" aria-labelledby="s8-titolo">
+          <div class="card-head">
+            <p class="num" aria-hidden="true">8</p>
+            <span class="item-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span>
+            <p class="chip" data-stato>Da iniziare</p>
+          </div>
+          <h2 id="s8-titolo">Super Bonus — Il Calendario dei 30 Giorni</h2>
+          <p class="sub">Giorno per giorno, cosa fare. Stampalo e attaccalo al frigo.</p>
+          <a class="btn" href="pdf/il-calendario-dei-30-giorni.pdf" target="_blank" rel="noopener" data-pdf="super-bonus">Apri il Calendario (PDF, 3&nbsp;pagine)</a>
+        </article>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 9. Aiuto -->
+  <section class="aiuto" id="aiuto" aria-labelledby="aiuto-titolo">
+    <div class="wrap">
+      <div class="card-head">
+        <p class="num" aria-hidden="true">9</p>
+        <span class="item-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg></span>
+      </div>
+      <h2 id="aiuto-titolo">Aiuto</h2>
+      <p class="sub">Scrivici. Ti risponde una persona, in italiano, entro 24 ore.</p>
+      <div class="help-grid">
+        <a class="help-card help-wa" href="https://wa.me/595985256963?text=Ho%20bisogno%20di%20aiuto%20con%20il%20programma" rel="noopener">
+          <span class="help-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path fill="#FFFFFF" d="M12 3C6.9 3 2.8 6.6 2.8 11c0 2.1.9 4 2.5 5.4L4.4 21l4.7-2.4c.9.3 1.9.4 2.9.4 5.1 0 9.2-3.6 9.2-8S17.1 3 12 3z"/></svg></span>
+          <span class="help-text">
+            <span class="help-label">Scrivici su WhatsApp</span>
+            <span class="help-value">+595 985 256963</span>
+          </span>
         </a>
-        <a class="btn" href="mailto:support@bntslab.online?subject=Aiuto%20con%20il%20programma">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#FFFFFF" d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 8.2L4.3 7.4v1.9L12 15l7.7-5.7V7.4L12 13.2z"/></svg>
-          Scrivici per email
+        <a class="help-card help-mail" href="mailto:support@bntslab.online?subject=Aiuto%20con%20il%20programma">
+          <span class="help-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path fill="#FFFFFF" d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm9 8.2L4.3 7.4v1.9L12 15l7.7-5.7V7.4L12 13.2z"/></svg></span>
+          <span class="help-text">
+            <span class="help-label">Scrivici per email</span>
+            <span class="help-value">support@bntslab.online</span>
+          </span>
         </a>
-        <div class="contact-plain">
-          <p>WhatsApp: <strong>+595 985 256963</strong></p>
-          <p>Email: <strong>support@bntslab.online</strong></p>
-        </div>
+      </div>
+      <div class="aiuto-note">
         <p class="estratto">Sull’estratto conto della carta vedrai <strong>BNTS LAB</strong>: è la dicitura neutra con cui compare il pagamento.</p>
         <p class="garanzia"><strong>Garanzia di 60 giorni:</strong> se vuoi il rimborso, scrivici e ci pensiamo noi, senza domande.</p>
-      </article>
-
+      </div>
     </div>
   </section>
 
@@ -412,10 +347,21 @@
   </div>
 </footer>
 
-<!-- Barra fixa: um botao so -->
-<nav class="helpbar" aria-label="Aiuto">
-  <div class="wrap">
-    <a class="btn" href="#aiuto">Aiuto</a>
+<!-- Barra de abas fixa: Programma · Analisi · Aiuto (some no celular deitado) -->
+<nav class="tabbar" aria-label="Navigazione principale">
+  <div class="tabbar-in">
+    <a class="tab is-active" href="#inizio" data-tab="programma" aria-current="page">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span class="tab-label">Programma</span>
+    </a>
+    <a class="tab" href="analisi/index.html" data-tab="analisi">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m8.5 13 2.5 2.5 4.5-5"/></svg>
+      <span class="tab-label">Analisi</span>
+    </a>
+    <a class="tab" href="#aiuto" data-tab="aiuto">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/></svg>
+      <span class="tab-label">Aiuto</span>
+    </a>
   </div>
 </nav>
 
@@ -423,24 +369,169 @@
 /* 1) Capa de toque: mostra o botao grande por cima de cada player e tira os controles nativos.
       No toque: play + tela cheia (tudo dentro do clique, senao o navegador bloqueia).
    2) Fim do video: sai da tela cheia, mostra o selo "Gia visto" (guardado no aparelho) e a capa em modo "rever".
-   Sem localStorage (bloqueado, modo privado) funciona igual, so nao lembra. Nada aqui rola a pagina.
-   KEY nova na v2 (a v1 usava 'video-visti' na mesma origem: nao herdar selo de video que nao existe mais). */
+   3) Progresso (hero), estado dos cartoes, "Continua", cartao "Aggiungi alla schermata Home", abas, service worker.
+   Sem localStorage (bloqueado, modo privado) funciona igual, so nao lembra. Nada aqui rola a pagina sozinho.
+   KEY = chave da v2 (a v1 usava 'video-visti' na mesma origem: nao herdar selo de video que nao existe mais). */
 (function () {
-  var KEY = 'programma-visti-v2';
-  function read() {
+  var KEY = 'programma-visti-v2';        /* videos terminados: {"1":1,"2":1,"3":1} */
+  var KEY_STATE = 'programma-stato-v3';  /* {"pdf":{"protocollo":1},"avviati":{"1":1}} */
+  var KEY_ANALISI = 'analisi_fatta';     /* "1" (gravado por analisi/index.html) */
+  var KEY_INSTALL = 'programma-installa-ok';
+  var TOTALE = 8;
+  var LABEL = { todo: 'Da iniziare', doing: 'Iniziato', done: 'Completato ✓' };
+
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
+  function readObj(k) {
     try {
-      var o = JSON.parse(window.localStorage.getItem(KEY) || '{}');
-      return (o && typeof o === 'object') ? o : {};
+      var o = JSON.parse(lsGet(k) || '{}');
+      return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
     } catch (e) { return {}; }
   }
-  function save(o) {
-    try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {}
+  function isObj(o) { return !!o && typeof o === 'object' && !Array.isArray(o); }
+  /* estado vive em memoria (seen / st) e e ESPELHADO no storage: se o storage falhar, a sessao continua contando */
+  var seen = readObj(KEY);
+  var st = readObj(KEY_STATE); if (!isObj(st.pdf)) st.pdf = {}; if (!isObj(st.avviati)) st.avviati = {};
+  function read() { return seen; }
+  function save(o) { seen = o; lsSet(KEY, JSON.stringify(o)); }
+  function readState() { return st; }
+  function saveState(s) { st = s; lsSet(KEY_STATE, JSON.stringify(s)); }
+  /* voltando de outra pagina/aba: o storage pode ter novidade (Analisi feita, video visto em outra aba) -> junta com a memoria */
+  function mergeFromStorage() {
+    var k, s2 = readObj(KEY); for (k in s2) { if (s2[k]) seen[k] = 1; }
+    var t2 = readObj(KEY_STATE);
+    if (isObj(t2.pdf)) { for (k in t2.pdf) { if (t2.pdf[k]) st.pdf[k] = 1; } }
+    if (isObj(t2.avviati)) { for (k in t2.avviati) { if (t2.avviati[k]) st.avviati[k] = 1; } }
   }
   function showBadge(card) {
     var badge = card.querySelector('[data-seen]');
     if (badge) { badge.removeAttribute('hidden'); }
   }
 
+  /* ---------- estado dos cartoes + hero ---------- */
+  var items = document.querySelectorAll('[data-item]');
+  function stateOf(card, seen, st, analisi) {
+    var tipo = card.getAttribute('data-tipo');
+    if (tipo === 'video') {
+      var id = card.getAttribute('data-video');
+      if (seen[id]) { return 'done'; }
+      var pk = card.getAttribute('data-pdf-key');
+      if (st.avviati[id] || (pk && st.pdf[pk])) { return 'doing'; }
+      return 'todo';
+    }
+    if (tipo === 'pdf') { return st.pdf[card.getAttribute('data-item')] ? 'done' : 'todo'; }
+    if (tipo === 'analisi') { return analisi ? 'done' : 'todo'; }
+    return 'todo';
+  }
+  function render() {
+    var seen = read(), st = readState(), analisi = lsGet(KEY_ANALISI) === '1';
+    var done = 0, next = null;
+    for (var i = 0; i < items.length; i++) {
+      var card = items[i], s = stateOf(card, seen, st, analisi);
+      var chip = card.querySelector('[data-stato]');
+      card.setAttribute('data-state', s);
+      if (s === 'done') {
+        done++;
+        if (card.getAttribute('data-tipo') === 'video') { showBadge(card); if (chip) { chip.setAttribute('hidden', ''); } }
+        else if (chip) { chip.textContent = LABEL.done; chip.className = 'chip chip-done'; chip.removeAttribute('hidden'); }
+      } else {
+        if (!next) { next = card; }
+        if (chip) { chip.textContent = LABEL[s]; chip.className = 'chip' + (s === 'doing' ? ' chip-doing' : ''); chip.removeAttribute('hidden'); }
+      }
+    }
+    var n = document.querySelector('[data-count]'); if (n) { n.textContent = String(done); }
+    var rn = document.querySelector('[data-ring-n]'); if (rn) { rn.textContent = String(done); }
+    var ring = document.querySelector('[data-ring]'); if (ring) { ring.setAttribute('aria-label', done + ' su ' + TOTALE + ' completati'); }
+    var fg = document.querySelector('[data-ring-fg]');
+    if (fg) { var C = 327; fg.style.strokeDashoffset = String(Math.round(C * (1 - done / TOTALE))); }
+    var nextEl = document.querySelector('[data-next]'), nextLabel = document.querySelector('[data-next-label]'), cont = document.querySelector('[data-continua]');
+    if (next) {
+      var h = next.querySelector('h2');
+      if (nextEl) { nextEl.textContent = h ? h.textContent : ''; }
+      if (nextLabel) { nextLabel.removeAttribute('hidden'); }
+      if (cont) { cont.setAttribute('href', '#' + next.id); }
+    } else {
+      if (nextEl) { nextEl.textContent = 'Hai completato tutto il programma.'; }
+      if (nextLabel) { nextLabel.setAttribute('hidden', ''); }
+      if (cont) { cont.setAttribute('href', '#s1'); }
+    }
+  }
+  function markStarted(id) { var st = readState(); if (!st.avviati[id]) { st.avviati[id] = 1; saveState(st); render(); } }
+  function markPdf(key) { var st = readState(); if (!st.pdf[key]) { st.pdf[key] = 1; saveState(st); render(); } }
+
+  /* "Continua": rola ate o proximo cartao nao completado (o href ja aponta pra ele) e destaca por um instante */
+  var cont = document.querySelector('[data-continua]');
+  if (cont) {
+    cont.addEventListener('click', function (ev) {
+      var id = (cont.getAttribute('href') || '').replace('#', '');
+      var target = id ? document.getElementById(id) : null;
+      if (!target) { return; }
+      ev.preventDefault();
+      var reduce = false;
+      try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+      try { target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); } catch (e) { target.scrollIntoView(); }
+      target.classList.add('is-highlight');
+      setTimeout(function () { target.classList.remove('is-highlight'); }, 1600);
+      try { history.replaceState(null, '', '#' + id); } catch (e) {}
+    });
+  }
+
+  /* PDF aberto (link normal, _blank): anota e atualiza o estado */
+  document.addEventListener('click', function (ev) {
+    var el = ev.target;
+    while (el && el !== document) {
+      if (el.getAttribute && el.getAttribute('data-pdf')) { markPdf(el.getAttribute('data-pdf')); return; }
+      el = el.parentNode;
+    }
+  });
+
+  /* ---------- cartao "Aggiungi alla schermata Home" ---------- */
+  function standalone() {
+    try { if (window.navigator && window.navigator.standalone) { return true; } } catch (e) {}
+    try { return !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); } catch (e) { return false; }
+  }
+  var inst = document.querySelector('[data-install]');
+  if (inst && !standalone() && lsGet(KEY_INSTALL) !== '1') {
+    var ua = (window.navigator && window.navigator.userAgent) || '';
+    var isIOS = /iPhone|iPad|iPod/i.test(ua), isAndroid = /Android/i.test(ua);
+    var ios = inst.querySelector('[data-install-ios]'), and = inst.querySelector('[data-install-android]');
+    if (isIOS && and) { and.setAttribute('hidden', ''); }
+    if (isAndroid && ios) { ios.setAttribute('hidden', ''); }
+    inst.removeAttribute('hidden');
+    var ok = inst.querySelector('[data-install-ok]');
+    if (ok) { ok.addEventListener('click', function () { lsSet(KEY_INSTALL, '1'); inst.setAttribute('hidden', ''); }); }
+    /* navegador sem <details> (muito antigo): mostra o conteudo aberto */
+    var det = inst.querySelector('details');
+    if (det && !('open' in det)) { det.setAttribute('open', ''); }
+  }
+
+  /* ---------- barra de abas: altura real -> --tabbar-real (o rodape nunca fica escondido atras dela) ---------- */
+  var bar = document.querySelector('.tabbar');
+  function setBarH() {
+    if (!bar) { return; }
+    try { document.documentElement.style.setProperty('--tabbar-real', bar.offsetHeight + 'px'); document.body.className += (document.body.className ? ' ' : '') + 'js-bar'; } catch (e) {}
+  }
+  try { if (window.ResizeObserver) { new ResizeObserver(setBarH).observe(bar); } else { setBarH(); window.addEventListener('resize', setBarH); } } catch (e) {}
+
+  /* ---------- abas: destaca "Aiuto" quando a secao entra na tela ---------- */
+  var tabs = document.querySelectorAll('[data-tab]'), aiuto = document.getElementById('aiuto'), ticking = false;
+  function setTab(name) {
+    for (var i = 0; i < tabs.length; i++) {
+      var on = tabs[i].getAttribute('data-tab') === name;
+      tabs[i].className = 'tab' + (on ? ' is-active' : '');
+      if (on) { tabs[i].setAttribute('aria-current', 'page'); } else { tabs[i].removeAttribute('aria-current'); }
+    }
+  }
+  function updateTabs() {
+    ticking = false;
+    if (!aiuto) { return; }
+    var r = aiuto.getBoundingClientRect();
+    setTab(r.top < window.innerHeight * 0.55 ? 'aiuto' : 'programma');
+  }
+  window.addEventListener('scroll', function () { if (!ticking) { ticking = true; (window.requestAnimationFrame || setTimeout)(updateTabs); } }, { passive: true });
+  updateTabs();
+
+  /* ---------- capa de toque + tela cheia (mecanica da v1/v2) ---------- */
   /* capa: state = 'play' | 'replay' | null (esconde). Capa visivel = video sem controls; capa escondida = com controls */
   function setCover(card, state) {
     var cover = card.querySelector('[data-cover]');
@@ -500,7 +591,6 @@
 
   var cards = document.querySelectorAll('[data-video]');
   var videos = document.querySelectorAll('video');
-  var seen = read();
 
   function wire(card) {
     var id = card.getAttribute('data-video');
@@ -535,15 +625,31 @@
       now[id] = 1;
       save(now);
       if (cover) { setCover(card, 'replay'); }
+      render();
     });
     /* um video por vez: ao dar play num, pausa os outros (evita dois audios juntos) */
     video.addEventListener('play', function () {
       for (var j = 0; j < videos.length; j++) {
         if (videos[j] !== video && !videos[j].paused) { videos[j].pause(); }
       }
+      markStarted(id);
     });
   }
   for (var i = 0; i < cards.length; i++) { wire(cards[i]); }
+
+  render();
+  /* voltando da Analisi (botao "indietro", bfcache) ou de outra aba: reconta */
+  window.addEventListener('pageshow', function () { mergeFromStorage(); render(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { mergeFromStorage(); render(); } });
+
+  /* service worker: so cache de app.css/fontes/icones/posters; HTML sempre da rede; mp4 e PDF nunca (ver sw.js) */
+  try {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+      });
+    }
+  } catch (e) {}
 })();
 </script>
 

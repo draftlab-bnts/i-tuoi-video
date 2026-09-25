@@ -3,6 +3,8 @@
 /_preview/
 /LEIA-ME.md
 /REVISIONE-IT.md
+/DESIGN.md
+/NUOVE-STRINGHE.md
 .env
 .env.*
 *.local
