@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  AREA MEMBRI v3 "Il tuo programma" (app shell): barra do topo fixa + hero de progresso + 9 secoes + barra de abas + PWA.
+  AREA MEMBRI v3 "Il Protocollo Quotidiano per Uomini" (app shell): barra do topo fixa + hero de progresso + 9 secoes + barra de abas + PWA.
   Conteudo e mecanica = v2 (2 lezioni em video, Protocollo PDF, Analisi, 3 bonus, super bonus, aiuto). Base: entrega\index.html (v1).
   CSS em app.css (design system, ver DESIGN.md). JS vanilla inline no fim. Zero dependencia externa, zero pixel.
 
@@ -14,11 +14,11 @@
   (programma-stato-v3), Analisi feita (analisi_fatta=1, gravado por analisi/index.html). Tudo em try/catch: sem storage mostra 0.
 
   ARQUIVOS (caminho RELATIVO, nunca URL absoluta):
-    app.css?v=20260925   manifest.webmanifest   sw.js   fonts/*.woff2
+    app.css?v=20260926   manifest.webmanifest   sw.js   fonts/*.woff2
     videos/lezione-1.mp4, lezione-2.mp4, la-fonte-della-virilita.mp4   pdf/*.pdf (5)   analisi/index.html
     img/poster-*.jpg (frames reais dos videos)  img/pdf-protocollo.jpg  img/icon-*.png  (node _tool\gera-capas.mjs)
 
-  VERSAO DO CACHE: o token 20260925 aparece aqui (app.css?v=) e em sw.js (CACHE). Toda republicacao troca os dois (LEIA-ME, secao 5).
+  VERSAO DO CACHE: o token 20260926 aparece aqui (app.css?v=) e em sw.js (CACHE). Toda republicacao troca os dois (LEIA-ME, secao 5).
 
   PLACEHOLDERS PRA TROCAR ANTES DE SUBIR (buscar por "{{" no editor; nao pode sobrar nenhum):
     {{RAGIONE_SOCIALE}}       nome legal do vendedor (rodape).
@@ -37,20 +37,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#083D42">
-<title>Il tuo programma</title>
-<meta name="description" content="Il tuo programma: le lezioni, i documenti e i bonus.">
+<title>Il Protocollo Quotidiano per Uomini</title>
+<meta name="description" content="Il Protocollo Quotidiano per Uomini: le lezioni, i documenti e i bonus.">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Programma">
+<meta name="apple-mobile-web-app-title" content="Il Protocollo">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="img/icon-192.png">
 <link rel="preload" href="fonts/manrope-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/fraunces-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=20260925">
+<link rel="stylesheet" href="app.css?v=20260926">
 </head>
 <body>
 
@@ -64,7 +64,7 @@
       <circle cx="34.6" cy="43.2" r="1.8" fill="#B9802A"/>
       <circle cx="36" cy="33.5" r="1.5" fill="#B9802A"/>
     </svg>
-    <p class="wordmark">Il Trucco del Bicarbonato</p>
+    <p class="wordmark">Il Protocollo Quotidiano per Uomini</p>
     <p class="wordmark-lab">BNTS Lab</p>
   </div>
 </header>
@@ -512,6 +512,15 @@
     try { document.documentElement.style.setProperty('--tabbar-real', bar.offsetHeight + 'px'); document.body.className += (document.body.className ? ' ' : '') + 'js-bar'; } catch (e) {}
   }
   try { if (window.ResizeObserver) { new ResizeObserver(setBarH).observe(bar); } else { setBarH(); window.addEventListener('resize', setBarH); } } catch (e) {}
+
+  /* ---------- barra do topo: altura real -> --topbar-real (o nome quebra em 2-3 linhas conforme a largura/fonte;
+     "Continua" e as abas rolam o cartao pra logo abaixo dela) ---------- */
+  var topBar = document.querySelector('.topbar');
+  function setTopH() {
+    if (!topBar) { return; }
+    try { document.documentElement.style.setProperty('--topbar-real', topBar.offsetHeight + 'px'); } catch (e) {}
+  }
+  try { if (window.ResizeObserver) { new ResizeObserver(setTopH).observe(topBar); } else { setTopH(); window.addEventListener('resize', setTopH); } } catch (e) {}
 
   /* ---------- abas: destaca "Aiuto" quando a secao entra na tela ---------- */
   var tabs = document.querySelectorAll('[data-tab]'), aiuto = document.getElementById('aiuto'), ticking = false;

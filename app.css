@@ -100,7 +100,7 @@ button{font:inherit;color:inherit}
 }
 .topbar-in{display:flex;align-items:center;gap:10px;min-height:var(--topbar-h);padding-top:8px;padding-bottom:8px}
 .logo{flex:0 0 auto;width:42px;height:42px}
-.wordmark{flex:1 1 auto;min-width:0;margin:0;font-family:var(--font-display);font-weight:600;font-size:1rem;line-height:1.12;color:var(--on-dark);letter-spacing:-.005em}
+.wordmark{flex:1 1 auto;min-width:0;margin:0;font-family:var(--font-display);font-weight:600;font-size:1rem;line-height:1;color:var(--on-dark);letter-spacing:-.005em;text-wrap:balance}
 .wordmark-lab{flex:0 0 auto;margin:0;font-size:1rem;font-weight:600;line-height:1.2;color:var(--on-dark-2);white-space:nowrap;padding:4px 10px;border:1px solid rgba(255,255,255,.22);border-radius:var(--r-pill)}
 @media (max-width:339px){.wordmark-lab{display:none}}
 
@@ -192,7 +192,7 @@ button{font:inherit;color:inherit}
   padding:18px 16px 16px;box-shadow:var(--sh-1);
 }
 .card + .card,.card + .how,.how + .card{margin-top:16px}
-.item{scroll-margin-top:calc(var(--topbar-h) + 12px);transition:box-shadow var(--t) var(--ease)}
+.item{scroll-margin-top:calc(var(--topbar-real,var(--topbar-h)) + 12px);transition:box-shadow var(--t) var(--ease)}
 .item.is-highlight{box-shadow:0 0 0 4px var(--gold),var(--sh-2)}
 .card-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 .7rem}
 .num{
@@ -302,7 +302,7 @@ ol.steps li::before{
 }
 
 /* ---------- 10. Aiuto ---------- */
-.aiuto{padding:1.6rem 0 0;scroll-margin-top:calc(var(--topbar-h) + 12px)}
+.aiuto{padding:1.6rem 0 0;scroll-margin-top:calc(var(--topbar-real,var(--topbar-h)) + 12px)}
 .help-grid{display:grid;grid-template-columns:1fr;gap:16px;margin:0 0 1rem}
 .help-card{
   display:flex;align-items:center;gap:14px;min-height:5rem;padding:14px 16px;
