@@ -2,11 +2,11 @@
    - HTML: rede primeiro (cache so como reserva se a rede falhar).
    - app.css, fontes, icones, posters, manifest: cache primeiro (preenche no 1o uso).
    - mp4 e PDF e qualquer pedido com Range: NUNCA passam por aqui (o navegador cuida sozinho, faixa por faixa).
-   - Cache versionado: toda republicacao troca o token 20260927 (aqui e no app.css?v= dos HTML); no activate os caches
+   - Cache versionado: toda republicacao troca o token 20260927b (aqui e no app.css?v= dos HTML); no activate os caches
      antigos sao apagados. Registro feito pelo index.html so se 'serviceWorker' existir, em try/catch. */
-var VERSION = 'v3-20260927';
+var VERSION = 'v3-20260927b';
 var CACHE = 'programma-' + VERSION;
-var PRECACHE = ['app.css?v=20260927', 'fonts/fraunces-var-latin.woff2', 'fonts/manrope-var-latin.woff2'];
+var PRECACHE = ['app.css?v=20260927b', 'fonts/fraunces-var-latin.woff2', 'fonts/manrope-var-latin.woff2'];
 var STATIC_RE = /\.(css|woff2|png|jpg|jpeg|svg|webmanifest)$/i;
 var NEVER_RE = /\.(mp4|m4v|webm|pdf)$/i;
 var HTML_RE = /(\/|\.html?)$/i;

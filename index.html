@@ -14,11 +14,11 @@
   (programma-stato-v3), Analisi feita (analisi_fatta=1, gravado por analisi/index.html). Tudo em try/catch: sem storage mostra 0.
 
   ARQUIVOS (caminho RELATIVO, nunca URL absoluta):
-    app.css?v=20260927   manifest.webmanifest   sw.js   fonts/*.woff2
+    app.css?v=20260927b   manifest.webmanifest   sw.js   fonts/*.woff2
     videos/lezione-1.mp4, lezione-2.mp4, la-fonte-della-virilita.mp4   pdf/*.pdf (5)   analisi/index.html
     img/poster-*.jpg (frames reais dos videos)  img/pdf-protocollo.jpg  img/icon-*.png  (node _tool\gera-capas.mjs)
 
-  VERSAO DO CACHE: o token 20260927 aparece aqui (app.css?v=) e em sw.js (CACHE). Toda republicacao troca os dois (LEIA-ME, secao 5).
+  VERSAO DO CACHE: o token 20260927b aparece aqui (app.css?v=) e em sw.js (CACHE). Toda republicacao troca os dois (LEIA-ME, secao 5).
 
   PLACEHOLDERS PRA TROCAR ANTES DE SUBIR (buscar por "{{" no editor; nao pode sobrar nenhum):
     {{RAGIONE_SOCIALE}}       nome legal do vendedor (rodape).
@@ -50,7 +50,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="img/icon-192.png">
 <link rel="preload" href="fonts/manrope-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/fraunces-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="app.css?v=20260927">
+<link rel="stylesheet" href="app.css?v=20260927b">
 </head>
 <body>
 
@@ -335,10 +335,6 @@
     <div class="legal">
       <p>
         Contatti e reclami: <a data-ph="EMAIL_CONTATTO" href="mailto:support@bntslab.online">support@bntslab.online</a>
-      </p>
-      <p class="links">
-        <a data-ph="TERMINI_URL" href="{{TERMINI_URL}}">Termini e condizioni</a>
-        <a data-ph="PRIVACY_URL" href="{{PRIVACY_URL}}">Informativa privacy</a>
       </p>
     </div>
   </div>
